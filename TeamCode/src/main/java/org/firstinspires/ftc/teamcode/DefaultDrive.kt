@@ -24,10 +24,10 @@ class DefaultDrive: LinearOpMode() {
 
     override fun runOpMode() {
         telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
-        val frontleft = MotorEx("frontleft").zeroed().brake()
-        val frontright = MotorEx("frontright").reverse().zeroed().brake()
-        val backleft = MotorEx("backleft").zeroed().brake()
-        val backright = MotorEx("backright").reverse().zeroed().brake()
+        val frontleft = MotorEx("frontleft").zeroed().brake().reverse()
+        val frontright = MotorEx("frontright").zeroed().brake()
+        val backleft = MotorEx("backleft").zeroed().brake().reverse()
+        val backright = MotorEx("backright").zeroed().brake()
 
         telemetry.run {
             addData("Initialized", true)

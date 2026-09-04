@@ -32,7 +32,9 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 /**
  * This is the Tuning class. It contains a selection menu for various tuning OpModes.
@@ -59,6 +61,7 @@ public class Tuning extends SelectableOpMode {
             s.folder("Localization", l -> {
                 l.add("Localization Test", LocalizationTest::new);
                 l.add("Offsets Tuner", OffsetsTuner::new);
+                l.add("NEW Automated Offsets Tuner", AutomatedOffsetsTuner::new);
                 l.add("Forward Tuner", ForwardTuner::new);
                 l.add("Lateral Tuner", LateralTuner::new);
                 l.add("Turn Tuner", TurnTuner::new);
@@ -73,6 +76,7 @@ public class Tuning extends SelectableOpMode {
             s.folder("Manual", p -> {
                 p.add("Translational Tuner", TranslationalTuner::new);
                 p.add("Heading Tuner", HeadingTuner::new);
+                p.add("NEW Automated Heading Tuner", HeadingAutoTuner::new);
                 p.add("Drive Tuner", DriveTuner::new);
                 p.add("Centripetal Tuner", CentripetalTuner::new);
             });
@@ -483,7 +487,7 @@ class LateralVelocityTuner extends OpMode {
      */
     @Override
     public void init_loop() {
-        telemetryM.debug("The robot will run at 1 power until it reaches " + DISTANCE + " inches to the right.");
+        telemetryM.debug("The robot will run at 1 power until it reaches " + DISTANCE + " inches to the left.");
         telemetryM.debug("Make sure you have enough room, since the robot has inertia after cutting power.");
         telemetryM.debug("After running the distance, the robot will cut power from the drivetrain and display the strafe velocity.");
         telemetryM.debug("Press B on Gamepad 1 to stop.");
@@ -1005,6 +1009,149 @@ class TranslationalTuner extends OpMode {
         telemetryM.addData("Error X", follower.errorCalculator.getTranslationalError().getXComponent());
         telemetryM.addData("Error Y", follower.errorCalculator.getTranslationalError().getYComponent());
         telemetryM.update(telemetry);
+    }
+}
+
+class HeadingAutoTuner extends OpMode {
+    private static final double ALPHA_LARGE = 0.6;
+    private static final double ALPHA_SMALL = 0.9;
+    private static final double POWER = 0.6;
+    private static final double RUNTIME = 3;
+    private static final int SAMPLES = 15;
+
+    private double tau;
+    private double lambda_small;
+    private double lambda_large;
+    private double K;
+    private final List<Double> times = new ArrayList<>();
+    private final List<Double> angularVelocities = new ArrayList<>();
+    private final NanoTimer timer = new NanoTimer();
+    private boolean done = false;
+    private double lastTime = 0.0;
+    private double dt = 0.0;
+
+    @Override
+    public void init() {
+    }
+
+    @Override
+    public void init_loop() {
+        telemetryM.debug("This will turn continuously in place for " + RUNTIME + " seconds.");
+        telemetryM.debug("Make sure you have enough room.");
+        telemetryM.update(telemetry);
+        follower.update();
+        drawCurrent();
+    }
+
+    @Override
+    public void start() {
+        timer.resetTimer();
+        lastTime = timer.getElapsedTimeSeconds();
+        follower.startTeleOpDrive(true);
+        follower.setTeleOpDrive(0, 0, POWER, true);
+        drawCurrent();
+    }
+
+    @Override
+    public void loop() {
+        if (gamepad1.bWasPressed()) {
+            follower.setTeleOpDrive(0, 0, 0, true);
+            requestOpModeStop();
+        }
+
+        double now = timer.getElapsedTimeSeconds();
+        dt = now - lastTime;
+        if (dt <= 0) dt = 1e-6;
+        lastTime = now;
+
+        follower.update();
+        telemetryM.update(telemetry);
+        drawCurrentAndHistory();
+
+        telemetryM.addData("done", done);
+        telemetryM.addData("dt", String.format("%.6f s", dt));
+
+        if (!done) {
+            times.add(timer.getElapsedTimeSeconds());
+            angularVelocities.add(Math.abs(follower.getAngularVelocity()));
+            telemetryM.addData("angular velocity (rad/s)", String.format("%.4f", angularVelocities.get(angularVelocities.size() - 1)));
+
+            if (timer.getElapsedTimeSeconds() >= RUNTIME) {
+                done = true;
+                systemIdentification();
+                follower.setTeleOpDrive(0, 0, 0, true);
+                telemetryM.addData("elapsed time (s)", String.format("%.4f", timer.getElapsedTimeSeconds()));
+            } else {
+                follower.setTeleOpDrive(0, 0, POWER, true);
+                return;
+            }
+        }
+
+        lambda_small = tau * ALPHA_SMALL;
+        lambda_large = tau * ALPHA_LARGE;
+
+        double kDLarge = getkD(lambda_large);
+        double kPLarge = getkP(lambda_large);
+        double kDSmall = getkD(lambda_small);
+        double kPSmall = getkP(lambda_small);
+
+        telemetryM.addData("Est tau (s)", String.format("%.4f", tau));
+        telemetryM.addData("Est K (rad/s per power)", String.format("%.4f", K));
+        telemetryM.addData("Lambda large (s)", String.format("%.4f", lambda_large));
+        telemetryM.addData("Lambda small (s)", String.format("%.4f", lambda_small));
+        telemetryM.addData("Large Coefficients", "kP=" + String.format("%.4f", kPLarge) + ", kD=" + String.format("%.4f", kDLarge));
+        telemetryM.addData("Small Coefficients", "kP=" + String.format("%.4f", kPSmall) + ", kD=" + String.format("%.4f", kDSmall));
+    }
+
+    private double getkP(double lambda) {
+        return tau / (K * lambda * lambda);
+    }
+
+    private double getkD(double lambda) {
+        return 1 / K * (2 * tau / lambda - 1);
+    }
+
+    private void systemIdentification() {
+        int N = times.size();
+        if (N < 4) {
+            throw new IllegalArgumentException("Failed calibration.");
+        }
+
+        int start = Math.max(0, N - SAMPLES);
+        double samples = N - start;
+        double sum = 0;
+        for (int i = start; i < N; i++) sum += angularVelocities.get(i);
+        double A = sum / samples;
+        this.K = A / POWER;
+
+        List<Double> y = new ArrayList<>();
+        List<Double> x = new ArrayList<>();
+        for (int i = 0; i < N; i++) {
+            double vel = angularVelocities.get(i) / POWER;
+            if (vel > 0.8 * K) continue;
+            if (vel < 0.1 * K) continue;
+            y.add(Math.log(K - vel));
+            x.add(times.get(i));
+        }
+        double[] linReg = linearFit(x.stream().toArray(Double[]::new), y.stream().toArray(Double[]::new));
+        if (linReg[1] == 0) throw new IllegalArgumentException("Failed calibration.");
+        this.tau = -1.0/linReg[1];
+    }
+
+    public double[] linearFit(Double[] x, Double[] y) {
+        int n = x.length;
+        double sumX = 0, sumXY = 0, sumY = 0, sumX2 = 0;
+
+        for (int i = 0; i < n; i++) {
+            sumX += x[i];
+            sumY += y[i];
+            sumXY += x[i] * y[i];
+            sumX2 += x[i] * x[i];
+        }
+
+        double m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        double b = (sumY - m * sumX) / n;
+        return new double[] {b, m};
     }
 }
 
@@ -1642,5 +1789,193 @@ class OffsetsTuner extends OpMode {
         telemetryM.update(telemetry);
 
         drawCurrentAndHistory();
+    }
+}
+
+class AutomatedOffsetsTuner extends OpMode {
+    public static double POWER = 0.2;
+    public static double RUNTIME = 10;
+    private final Timer timer = new Timer();
+    private boolean done = false;
+    private final Stack<Vector> poses = new Stack<>();
+    private Vector offsets;
+
+    private static class Circle {
+        Vector center;
+        double radius;
+
+        Circle(Vector center, double radius) {
+            this.center = center;
+            this.radius = radius;
+        }
+    }
+
+    @Override
+    public void init() {
+        follower.setStartingPose(new Pose());
+        follower.update();
+    }
+
+    @Override
+    public void start() {
+        timer.resetTimer();
+        follower.startTeleOpDrive(true);
+        follower.setTeleOpDrive(0, 0, POWER, true);
+    }
+
+    /** This initializes the PoseUpdater as well as the Panels telemetry. */
+    @Override
+    public void init_loop() {
+        telemetryM.debug("This will turn continuously in place for " + RUNTIME + " seconds.");
+        telemetryM.debug("Make sure you have enough room.");
+        telemetryM.update(telemetry);
+        follower.update();
+    }
+
+    /**
+     * This updates the robot's pose estimate, and updates the Panels telemetry with the
+     * calculated offsets and draws the robot.
+     */
+    @Override
+    public void loop() {
+        follower.update();
+        telemetryM.addData("X", follower.getPose().getX());
+        telemetryM.addData("Y", follower.getPose().getY());
+
+        if (gamepad1.bWasPressed()) {
+            follower.setTeleOpDrive(0, 0, 0, true);
+            requestOpModeStop();
+        }
+
+        if (!done) {
+            poses.push(follower.getPose().getAsVector());
+
+            if (timer.getElapsedTimeSeconds() >= RUNTIME) {
+                done = true;
+                telemetryM.addData("pose", poses.size());
+                offsets = fitCircle(poses.toArray(new Vector[0]));
+                follower.setTeleOpDrive(0, 0, 0, true);
+                telemetryM.addData("elapsed time (s)", String.format("%.4f", timer.getElapsedTimeSeconds()));
+            } else {
+                follower.setTeleOpDrive(0, 0, POWER, true);
+                return;
+            }
+        }
+
+        telemetryM.debug("The following values are the offsets in inches that should be applied to your localizer.");
+        telemetryM.debug("strafeX: " + offsets.getXComponent());
+        telemetryM.debug("forwardY: " + offsets.getYComponent());
+        telemetryM.update(telemetry);
+    }
+
+    private Vector fitCircle(Vector[] points) {
+        points = Arrays.copyOfRange(points, 20, points.length);
+        Circle circle = taubin(points);
+        circle = gaussNewton(points, circle);
+        return circle.center.times(-1);
+    }
+
+    private static Circle taubin(Vector[] pts) {
+        int n = pts.length;
+
+        double mx = 0, my = 0;
+        for (Vector p : pts) { mx += p.getXComponent(); my += p.getYComponent(); }
+        mx /= n; my /= n;
+
+        double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
+        for (Vector p : pts) {
+            double x = p.getXComponent() - mx, y = p.getYComponent() - my;
+            double z = x*x + y*y;
+            Mxx += x*x; Myy += y*y; Mxy += x*y;
+            Mxz += x*z; Myz += y*z; Mzz += z*z;
+        }
+        Mxx/=n; Myy/=n; Mxy/=n; Mxz/=n; Myz/=n; Mzz/=n;
+
+        double Mz    = Mxx + Myy;
+        double CovXy = Mxx*Myy - Mxy*Mxy;
+        double VarZ  = Mzz - Mz*Mz;
+
+        double A3 = 4*Mz;
+        double A2 = -3*Mz*Mz - Mzz;
+        double A1 = VarZ*Mz + 4*CovXy*Mz - Mxz*Mxz - Myz*Myz;
+        double A0 = Mxz*(Mxz*Myy - Myz*Mxy) + Myz*(Myz*Mxx - Mxz*Mxy) - VarZ*CovXy;
+        double A22 = A2 + A2;
+        double A33 = A3 + A3 + A3;
+
+        double x = 0, y = A0;
+        for (int iter = 0; iter < 99; iter++) {
+            double dy   = A1 + x*(A22 + A33*x);
+            double xnew = x - y/dy;
+            if (xnew == x || !Double.isFinite(xnew)) break;
+            double ynew = A0 + xnew*(A1 + xnew*(A2 + xnew*A3));
+            if (Math.abs(ynew) >= Math.abs(y)) break;
+            x = xnew; y = ynew;
+        }
+
+        double det = x*x - x*Mz + CovXy;
+        double cxc = (Mxz*(Myy - x) - Myz*Mxy) / det / 2.0;
+        double cyc = (Myz*(Mxx - x) - Mxz*Mxy) / det / 2.0;
+        double r   = Math.sqrt(cxc*cxc + cyc*cyc + Mz);
+
+        Vector center = new Vector();
+        center.setOrthogonalComponents(cxc + mx, cyc + my);
+        return new Circle(center, r);
+    }
+
+    private static Circle gaussNewton(Vector[] pts, Circle init) {
+        double a = init.center.getXComponent();
+        double b = init.center.getYComponent();
+        double r = init.radius;
+        int n = pts.length;
+
+        for (int iter = 0; iter < 200; iter++) {
+            double[] res = new double[n];
+            double[] da  = new double[n];
+            double[] db  = new double[n];
+            double[] dr  = new double[n];
+
+            for (int i = 0; i < n; i++) {
+                double dx   = pts[i].getXComponent() - a;
+                double dy   = pts[i].getYComponent() - b;
+                double dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 1e-4) continue;
+                res[i] = dist - r;
+                da[i]  = -dx/dist;
+                db[i]  = -dy/dist;
+                dr[i]  = -1.0;
+            }
+
+            double[][] jCols = { da, db, dr };
+
+            Matrix JtJ = new Matrix(3, 3);
+            Matrix Jtf = new Matrix(3, 1);
+
+            for (int row = 0; row < 3; row++) {
+                double jtf = 0;
+                for (int i = 0; i < n; i++) jtf += jCols[row][i] * res[i];
+                Jtf.set(row, 0, jtf);
+
+                for (int col = 0; col < 3; col++) {
+                    double jtj = 0;
+                    for (int i = 0; i < n; i++) jtj += jCols[row][i] * jCols[col][i];
+                    JtJ.set(row, col, jtj);
+                }
+            }
+
+            double gradNorm = 0;
+            for (int i = 0; i < 3; i++) gradNorm += Jtf.get(i,0) * Jtf.get(i,0);
+            if (Math.sqrt(gradNorm) * 2 < 1e-12) break;
+
+            Matrix invJtJ = Matrix.inverse3x3(JtJ);
+            Matrix delta = invJtJ.times(Jtf);
+
+            a -= delta.get(0, 0);
+            b -= delta.get(1, 0);
+            r -= delta.get(2, 0);
+        }
+
+        Vector center = new Vector();
+        center.setOrthogonalComponents(a, b);
+        return new Circle(center, r);
     }
 }

@@ -18,6 +18,7 @@ dependencies {
     implementation 'com.pedropathing:ftc:2.1.2'
     implementation 'com.pedropathing:telemetry:1.0.0'
     implementation 'com.pedropathing:ivy:1.0.0'
-    implementation 'dev.anygeneric:blazeftc:0.1.31'
+    implementation 'dev.anygeneric:blazeftc:0.1.44'
+    implementation 'dev.anygeneric:blazeftc_pedro:0.1.44'
 }
 
