@@ -1,0 +1,228 @@
+package org.firstinspires.ftc.teamcode.kickoff;
+
+import android.util.Size;
+
+import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+
+@Configurable
+public class OV9281 {
+
+    private final AprilTagProcessor aprilTag;
+    private final VisionPortal visionPortal;
+    private ExposureControl exposureControl;
+    private GainControl gainControl;
+    private long defaultExposure;
+    private int defaultGain;
+    boolean debugTelemetry = true;
+    private double cameraTagOffset = 0.0;
+    public static int viewContainerId = -1;
+
+    private final HardwareMap hwMap;
+    private final Telemetry tele;
+
+    private final ArrayList<AprilTagDetection> detectionsBuffer = new ArrayList<>();
+    private final ArrayList<AprilTagDetection> obeliskDetections = new ArrayList<>();
+
+    // https://ftc-docs.firstinspires.org/en/latest/apriltag/vision_portal/apriltag_localization/apriltag-localization.html
+    /*
+        If all values are zero (no translation), that implies the camera is at the center of the robot.
+        Suppose your camera is positioned 5 inches to the left, 7 inches forward, and 12 inches above the ground - you would need to set the position to (-5, 7, 12).
+     */
+    private final Position cameraPosition = new Position(DistanceUnit.MM,
+            0.0, 268.79544, 289.42108, 0);
+    // this is relative to the COR of turret
+
+    private Pose turretPose = new Pose(72.0,72,0);
+    private Pose2D robotPose2d;
+    private boolean newReading = false;
+
+    /*
+        If all values are zero (no rotation), that implies the camera is pointing straight up.
+        In most cases, you’ll need to set the pitch to -90 degrees (rotation about the x-axis), meaning the camera is horizontal.
+        Use a yaw of 0 if the camera is pointing forwards, +90 degrees if it’s pointing straight left, -90 degrees for straight right, etc.
+        You can also set the roll to +/-90 degrees if it’s vertical, or 180 degrees if it’s upside-down.
+     */
+    private final YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
+            0, -90, 180, 0);
+
+    double fx = 549.993552641,
+            fy = 549.993552641,
+            cx = 327.021677114,
+            cy = 255.879397051;
+
+    public AprilTagProcessor getAprilTag() {
+        return aprilTag;
+    }
+
+    public VisionPortal getVisionPortal() {
+        return visionPortal;
+    }
+
+    // exposure: 1-7
+    // gain: 1-6
+    public OV9281 (HardwareMap hwMap, Telemetry tele) {
+        this.hwMap = hwMap;
+        this.tele = tele;
+
+        aprilTag = new AprilTagProcessor.Builder()
+                .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
+                .setDrawTagOutline(false)
+                .setDrawTagID(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setLensIntrinsics(fx,fy,cx,cy)
+                .setNumThreads(3)
+                .setCameraPose(cameraPosition,cameraOrientation)
+                .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
+                .build();
+
+        aprilTag.setDecimation(1.5f);
+        aprilTag.setPoseSolver(AprilTagProcessor.PoseSolver.OPENCV_SQPNP);
+
+        if (viewContainerId == -1) {
+            visionPortal = new VisionPortal.Builder()
+                    .setCamera(hwMap.get(WebcamName.class, "o"))
+                    .setCameraResolution(new Size(640, 480))
+                    .setShowStatsOverlay(true)
+                    .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
+                    .addProcessor(aprilTag)
+                    .setAutoStopLiveView(true)
+                    .build();
+        } else {
+            visionPortal = new VisionPortal.Builder()
+                    .setCamera(hwMap.get(WebcamName.class, "o"))
+                    .setCameraResolution(new Size(640, 480))
+                    .setShowStatsOverlay(true)
+                    .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
+                    .setLiveViewContainerId(viewContainerId)
+                    .addProcessor(aprilTag)
+                    .build();
+        }
+
+        while (visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING) {
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+
+        exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+        gainControl = visionPortal.getCameraControl(GainControl.class);
+        exposureControl.setMode(ExposureControl.Mode.Manual);
+        defaultExposure = exposureControl.getExposure(TimeUnit.MILLISECONDS);
+        defaultGain = gainControl.getGain();
+        exposureControl.setExposure(5, TimeUnit.MILLISECONDS);
+        gainControl.setGain(7);
+    }
+
+    public void resetExposureGain () {
+        if (exposureControl != null && gainControl != null) {
+            exposureControl.setMode(ExposureControl.Mode.Auto);
+            exposureControl.setExposure(defaultExposure,TimeUnit.MILLISECONDS);
+            gainControl.setGain(defaultGain);
+        }
+    }
+
+    public void setExposure (int exposure) {
+        exposureControl.setExposure(exposure, TimeUnit.MILLISECONDS);
+    }
+
+    public void disableProcessor() {
+        visionPortal.setProcessorEnabled(aprilTag, false);
+    }
+
+    public void enableProcessor() {
+        visionPortal.setProcessorEnabled(aprilTag, true);
+    }
+
+    public void stopStreaming() {
+        visionPortal.stopStreaming();
+    }
+
+    public void resumeStreaming() {
+        visionPortal.resumeStreaming();
+    }
+
+    public double getBearingOffset() {
+        cameraTagOffset = detectionsBuffer.stream().filter(x -> x.id == 20 || x.id == 24).findFirst().map(x -> x.ftcPose.bearing).orElse(cameraTagOffset);
+        return cameraTagOffset;
+    }
+
+    public void periodic() {
+        detectionsBuffer.clear();
+        if (aprilTag.getDetections() != null) {
+            detectionsBuffer.addAll(aprilTag.getDetections());
+        }
+
+        int count = detectionsBuffer.size();
+
+        if (count == 0) {
+            if (debugTelemetry)
+                tele.addData("Detected April Tags", 0);
+            newReading = false;
+            return;
+        }
+
+        if (debugTelemetry)
+            tele.addData("Detected April Tags", detectionsBuffer.size());
+        for (AprilTagDetection detection : detectionsBuffer) {
+            if (debugTelemetry) {
+                tele.addData("ID", detection.id);
+                tele.addData("Sureness", detection.decisionMargin);
+            }
+
+            if ((detection.id == 20 || detection.id == 24) && detection.decisionMargin > 26.7) {
+                robotPose2d = new Pose2D(
+                        DistanceUnit.INCH, detection.robotPose.getPosition().x, detection.robotPose.getPosition().y, AngleUnit.DEGREES, detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES)
+                );
+                turretPose = new Pose(robotPose2d.getY(DistanceUnit.INCH) + 72.0, (-1 * robotPose2d.getX(DistanceUnit.INCH)) + 72.0, robotPose2d.getHeading(AngleUnit.RADIANS));
+
+                newReading = true;
+            } else {
+                newReading = false;
+            }
+        }
+    }
+
+    public void setDecimation(float decimation) {
+        aprilTag.setDecimation(decimation);
+    }
+
+    public int getDetectionsAmount() {
+        return detectionsBuffer.size();
+    }
+
+    public Pose getTurretPose() {
+        return turretPose;
+    }
+
+    public Pose2D getRobotPose2d () {
+        return robotPose2d;
+    }
+
+    public boolean getHasNewReading() {
+        return newReading;
+    }
+}
+

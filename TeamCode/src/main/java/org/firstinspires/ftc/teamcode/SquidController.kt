@@ -1,0 +1,48 @@
+package org.firstinspires.ftc.teamcode
+
+import club.bitflip.utils.PIDController
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sign
+import kotlin.math.sqrt
+
+class SquidController @JvmOverloads constructor(
+    kP: Double = 0.0,
+    kI: Double = 0.0,
+    kD: Double = 0.0,
+    kV: Double = 0.0,
+    maxIntegral: Double = 1.0,
+    minIntegral: Double = -1.0
+) : PIDController(kP, kI, kD, kV, 0.0,maxIntegral, minIntegral) {
+    override fun calculate (processVariable: Double, setpoint: Double) : Double {
+        // handle time period stuff
+        val currentTime = timer.nanoseconds() / 1E9
+        if (lastTime == 0.0) lastTime = currentTime
+        timePeriod = currentTime - lastTime
+
+        lastTime = currentTime
+
+
+        // handle error and velocity error
+        this.processVariable = processVariable
+        this.setpoint = setpoint
+
+        error = setpoint - processVariable
+        velError = if (timePeriod != 0.0) {(error - lastError) / timePeriod} else {0.0}
+        lastError = error
+
+        // handle integral error
+        totalError += timePeriod * error
+        totalError = min(maxIntegral, max(minIntegral, totalError))
+
+        val feedforward = setpoint * kV + sign(error) * kS
+
+        // only difference between PIDController.kt and this
+        // sqrt of the error to better follow kinematics or whatever
+        // https://www.youtube.com/watch?v=WA9o3e4a01Q
+        var feedback = kP * sqrt(abs(error)) * sign(error) + kD * velError
+        feedback = if (abs(feedback + feedforward) >= 1) feedback else feedback + kI * totalError
+        return feedforward + feedback
+    }
+}

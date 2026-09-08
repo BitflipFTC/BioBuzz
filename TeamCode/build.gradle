@@ -16,9 +16,6 @@ buildscript {
         maven {
             url "https://repo.dairy.foundation/releases"
         }
-        maven {
-            url "https://maven.bitflip.club/releases"
-        }
     }
     dependencies {
         classpath "dev.frozenmilk:Load:0.2.4"
@@ -52,23 +49,15 @@ repositories {
         name = "nullftcReleases"
         url = "https://maven.nullftc.dev/releases"
     }
-
-    maven { url = "https://maven.bitflip.club/releases" }
 }
 
 dependencies {
     implementation project(':FtcRobotController')
 
-//    implementation("com.bylazar.sloth:fullpanels:0.2.4+1.0.12") {
-//        exclude group: 'com.bylazar.sloth', module: 'gamepad'
-//        exclude group: 'com.bylazar.sloth', module: 'camerastream'
-//    }
-//
-//    implementation("dev.frozenmilk.sinister:Sloth:0.2.4")
     implementation "dev.nullftc:Profiler:SNAPSHOT-8e16b25"
-    implementation ("club.bitflip:utils:1.0.2") {
-        exclude group: 'com.bylazar'
-    }
+//    implementation ("club.bitflip:utils:1.0.2") {
+//        exclude group: 'com.bylazar'
+//    }
 
     implementation 'com.bylazar:fullpanels:1.0.12'
 }

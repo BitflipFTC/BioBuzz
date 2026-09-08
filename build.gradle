@@ -10,6 +10,7 @@ buildscript {
     }
     repositories {
         mavenCentral()
+        mavenLocal()
         google()
     }
     dependencies {
@@ -33,6 +34,7 @@ allprojects {
 
         maven { url "https://repo.dairy.foundation/releases" }
         maven { url "https://mymaven.bylazar.com/releases" }
+        maven { url "https://maven.bitflip.club/releases" }
     }
 }
 
