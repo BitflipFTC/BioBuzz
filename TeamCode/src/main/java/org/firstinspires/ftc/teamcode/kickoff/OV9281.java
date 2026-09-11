@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.kickoff;
 import android.util.Size;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -46,12 +47,11 @@ public class OV9281 {
         If all values are zero (no translation), that implies the camera is at the center of the robot.
         Suppose your camera is positioned 5 inches to the left, 7 inches forward, and 12 inches above the ground - you would need to set the position to (-5, 7, 12).
      */
-    private final Position cameraPosition = new Position(DistanceUnit.MM,
-            0.0, 268.79544, 289.42108, 0);
-    // this is relative to the COR of turret
+    private final Position cameraPosition = new Position(DistanceUnit.INCH,
+            0.0, 5, 2, 0);
 
-    private Pose2D robotPose2d;
     private boolean newReading = false;
+    Pose2D robotPose2d;
 
     /*
         If all values are zero (no rotation), that implies the camera is pointing straight up.
@@ -181,6 +181,12 @@ public class OV9281 {
                 tele.addData("ID", detection.id);
                 tele.addData("Sureness", detection.decisionMargin);
             }
+
+            robotPose2d = new Pose2D(
+                    DistanceUnit.INCH, detection.robotPose.getPosition().x,
+                    detection.robotPose.getPosition().y, AngleUnit.DEGREES,
+                    detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES)
+            );
         }
     }
 

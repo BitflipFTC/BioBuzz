@@ -6,6 +6,10 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.Drawing;
 import org.firstinspires.ftc.teamcode.SquidController;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -46,6 +50,10 @@ public class FollowAprilTag extends LinearOpMode {
         AprilTagDetection detection;
         double bearing;
 
+        Pose2D robotPose = new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0);
+
+        Drawing.init();
+
         while (opModeIsActive()) {
             lastUsingc270 = usingC270;
 
@@ -68,6 +76,9 @@ public class FollowAprilTag extends LinearOpMode {
                 } else {
                     bearing = 0f;
                 }
+
+                robotPose = ov9281.getRobotPose2d();
+                Drawing.drawRobot(robotPose);
             } else {
                 c270.updateAtag();
 
@@ -77,6 +88,9 @@ public class FollowAprilTag extends LinearOpMode {
                 } else {
                     bearing = 0f;
                 }
+
+                robotPose = c270.getRobotPose2d();
+                Drawing.drawRobot(robotPose);
             }
 
             controller.setCoeffs(kP, 0, kD, 0, kS);

@@ -3,6 +3,7 @@ repositories {
     mavenLocal()
     google() // Needed for androidx
     maven { url 'https://repo.dairy.foundation/releases/'}
+    maven { url 'https://maven.bitflip.club/releases/'}
 }
 
 dependencies {
@@ -20,6 +21,6 @@ dependencies {
     implementation 'com.pedropathing:tuning:1.0.0'
     implementation 'com.pedropathing.ivy:core:1.1.1'
     implementation 'com.pedropathing.ivy:pedro:1.1.1'
-    implementation 'club.bitflip:utils:1.0.3'
+    implementation 'club.bitflip:utils:1.0.4'
 }
 
