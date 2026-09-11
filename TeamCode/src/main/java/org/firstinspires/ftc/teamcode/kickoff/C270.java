@@ -9,17 +9,25 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.kickoff.pipelines.PollenHoughCircles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.VisionProcessor;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Configurable
 public class C270 {
-
-    private final PollenHoughCircles processor;
+    private PollenHoughCircles processor = null;
+    private AprilTagProcessor atag = null;
+    private final ArrayList<AprilTagDetection> detectionsBuffer = new ArrayList<>();
     private final VisionPortal visionPortal;
     private ExposureControl exposureControl;
     private GainControl gainControl;
@@ -43,32 +51,62 @@ public class C270 {
         return pollenList;
     }
 
-    // exposure: 1-7
-    // gain: 1-6
-    public C270 (HardwareMap hwMap, Telemetry tele) {
+    public C270 (HardwareMap hwMap, Telemetry tele, boolean houghCircles) {
         this.hwMap = hwMap;
         this.tele = tele;
 
-        processor = new PollenHoughCircles();
+        if (houghCircles) {
+            processor = new PollenHoughCircles();
 
-        if (viewContainerId == -1) {
-            visionPortal = new VisionPortal.Builder()
-                    .setCamera(hwMap.get(WebcamName.class, "c"))
-                    .setCameraResolution(new Size(resolutionWidth, resolutionHeight))
-                    .setShowStatsOverlay(true)
-                    .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
-                    .addProcessor(processor)
-                    .setAutoStopLiveView(true)
-                    .build();
+            if (viewContainerId == -1) {
+                visionPortal = new VisionPortal.Builder()
+                        .setCamera(hwMap.get(WebcamName.class, "c"))
+                        .setCameraResolution(new Size(resolutionWidth, resolutionHeight))
+                        .setShowStatsOverlay(true)
+                        .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
+                        .addProcessor(processor)
+                        .setAutoStopLiveView(true)
+                        .build();
+            } else {
+                visionPortal = new VisionPortal.Builder()
+                        .setCamera(hwMap.get(WebcamName.class, "c"))
+                        .setCameraResolution(new Size(resolutionWidth, resolutionHeight))
+                        .setShowStatsOverlay(true)
+                        .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
+                        .setLiveViewContainerId(viewContainerId)
+                        .addProcessor(processor)
+                        .build();
+            }
         } else {
-            visionPortal = new VisionPortal.Builder()
-                    .setCamera(hwMap.get(WebcamName.class, "c"))
-                    .setCameraResolution(new Size(resolutionWidth, resolutionHeight))
-                    .setShowStatsOverlay(true)
-                    .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
-                    .setLiveViewContainerId(viewContainerId)
-                    .addProcessor(processor)
+            atag = new AprilTagProcessor.Builder()
+                    .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
+                    .setDrawTagOutline(true)
+                    .setDrawTagID(true)
+                    .setDrawAxes(true)
+                    .setDrawCubeProjection(true)
+                    .setNumThreads(3)
+                    .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                     .build();
+
+            if (viewContainerId == -1) {
+                visionPortal = new VisionPortal.Builder()
+                        .setCamera(hwMap.get(WebcamName.class, "c"))
+                        .setCameraResolution(new Size(640,480))
+                        .setShowStatsOverlay(true)
+                        .setStreamFormat(VisionPortal.StreamFormat.YUY2)
+                        .addProcessor(atag)
+                        .setAutoStopLiveView(true)
+                        .build();
+            } else {
+                visionPortal = new VisionPortal.Builder()
+                        .setCamera(hwMap.get(WebcamName.class, "c"))
+                        .setCameraResolution(new Size(640,480))
+                        .setShowStatsOverlay(true)
+                        .setStreamFormat(VisionPortal.StreamFormat.YUY2)
+                        .setLiveViewContainerId(viewContainerId)
+                        .addProcessor(atag)
+                        .build();
+            }
         }
 
         while (visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING) {
@@ -117,7 +155,37 @@ public class C270 {
         visionPortal.resumeStreaming();
     }
 
-    public void periodic() {
+    public void updatePollenList() {
         pollenList = processor.getPollenList();
+    }
+
+    public void updateAtag() {
+        detectionsBuffer.clear();
+        if (atag.getDetections() != null) {
+            detectionsBuffer.addAll(atag.getDetections());
+        }
+
+        int count = detectionsBuffer.size();
+
+        if (count == 0) {
+            if (true)
+                tele.addData("Detected April Tags", 0);
+            return;
+        }
+
+        if (true)
+            tele.addData("Detected April Tags", detectionsBuffer.size());
+        for (AprilTagDetection detection : detectionsBuffer) {
+            if (true) {
+                tele.addData("ID", detection.id);
+                tele.addData("Sureness", detection.decisionMargin);
+            }
+        }
+    }
+
+    public int getDetectionsAmount () { return detectionsBuffer.size(); }
+
+    public ArrayList<AprilTagDetection> getDetections() {
+        return detectionsBuffer;
     }
 }

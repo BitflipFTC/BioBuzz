@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.kickoff;
 import android.util.Size;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -51,7 +50,6 @@ public class OV9281 {
             0.0, 268.79544, 289.42108, 0);
     // this is relative to the COR of turret
 
-    private Pose turretPose = new Pose(72.0,72,0);
     private Pose2D robotPose2d;
     private boolean newReading = false;
 
@@ -64,18 +62,10 @@ public class OV9281 {
     private final YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
             0, -90, 180, 0);
 
-    double fx = 549.993552641,
+    final double fx = 549.993552641,
             fy = 549.993552641,
             cx = 327.021677114,
             cy = 255.879397051;
-
-    public AprilTagProcessor getAprilTag() {
-        return aprilTag;
-    }
-
-    public VisionPortal getVisionPortal() {
-        return visionPortal;
-    }
 
     // exposure: 1-7
     // gain: 1-6
@@ -85,10 +75,10 @@ public class OV9281 {
 
         aprilTag = new AprilTagProcessor.Builder()
                 .setTagLibrary(AprilTagGameDatabase.getDecodeTagLibrary())
-                .setDrawTagOutline(false)
+                .setDrawTagOutline(true)
                 .setDrawTagID(true)
-                .setDrawAxes(false)
-                .setDrawCubeProjection(false)
+                .setDrawAxes(true)
+                .setDrawCubeProjection(true)
                 .setLensIntrinsics(fx,fy,cx,cy)
                 .setNumThreads(3)
                 .setCameraPose(cameraPosition,cameraOrientation)
@@ -191,17 +181,6 @@ public class OV9281 {
                 tele.addData("ID", detection.id);
                 tele.addData("Sureness", detection.decisionMargin);
             }
-
-            if ((detection.id == 20 || detection.id == 24) && detection.decisionMargin > 26.7) {
-                robotPose2d = new Pose2D(
-                        DistanceUnit.INCH, detection.robotPose.getPosition().x, detection.robotPose.getPosition().y, AngleUnit.DEGREES, detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES)
-                );
-                turretPose = new Pose(robotPose2d.getY(DistanceUnit.INCH) + 72.0, (-1 * robotPose2d.getX(DistanceUnit.INCH)) + 72.0, robotPose2d.getHeading(AngleUnit.RADIANS));
-
-                newReading = true;
-            } else {
-                newReading = false;
-            }
         }
     }
 
@@ -213,8 +192,8 @@ public class OV9281 {
         return detectionsBuffer.size();
     }
 
-    public Pose getTurretPose() {
-        return turretPose;
+    public ArrayList<AprilTagDetection> getDetections() {
+        return detectionsBuffer;
     }
 
     public Pose2D getRobotPose2d () {

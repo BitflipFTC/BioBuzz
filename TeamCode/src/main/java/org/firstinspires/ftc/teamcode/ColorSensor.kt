@@ -7,12 +7,8 @@ import com.qualcomm.robotcore.hardware.I2cDeviceSynchSimple
 import com.qualcomm.robotcore.hardware.NormalizedRGBA
 import com.qualcomm.robotcore.util.Range
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
-import kotlin.jvm.java
-import kotlin.jvm.javaClass
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.ranges.contains
-import kotlin.run
 
 class ColorSensor() {
     // The normal color sensor
