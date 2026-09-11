@@ -60,10 +60,18 @@ public class FollowPollen extends LinearOpMode {
             telemetry.addData("Pow", pow);
             telemetry.addData("Pv", -biggest.x + (double) c270.resolutionWidth / 2f);
             telemetry.addData("sp", 0);
-            frontleft.setPower(pow);
-            backleft.setPower(pow);
-            frontright.setPower(-pow);
-            backright.setPower(-pow);
+
+            if (gamepad1.right_trigger >= 0.1) {
+                frontleft.setPower(pow);
+                backleft.setPower(pow);
+                frontright.setPower(-pow);
+                backright.setPower(-pow);
+            } else {
+                frontleft.setPower(0);
+                backleft.setPower(0);
+                frontright.setPower(0);
+                backright.setPower(0);
+            }
 
             telemetry.update();
         }

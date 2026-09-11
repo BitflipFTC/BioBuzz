@@ -98,10 +98,17 @@ public class FollowAprilTag extends LinearOpMode {
             double pv = bearing;
             double pow = controller.calculate(pv, 0f);
 
-            frontleft.setPower(pow);
-            backleft.setPower(pow);
-            frontright.setPower(-pow);
-            backright.setPower(-pow);
+            if (gamepad1.right_trigger >= 0.1) {
+                frontleft.setPower(pow);
+                backleft.setPower(pow);
+                frontright.setPower(-pow);
+                backright.setPower(-pow);
+            } else {
+                frontleft.setPower(0);
+                backleft.setPower(0);
+                frontright.setPower(0);
+                backright.setPower(0);
+            }
 
             telemetry.addData("Pow", pow);
             telemetry.addData("Pv", pv);
