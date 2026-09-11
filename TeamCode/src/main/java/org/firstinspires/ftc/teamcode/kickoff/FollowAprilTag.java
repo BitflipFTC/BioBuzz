@@ -79,6 +79,8 @@ public class FollowAprilTag extends LinearOpMode {
 
                 robotPose = ov9281.getRobotPose2d();
                 Drawing.drawRobot(robotPose);
+
+                telemetry.addData("Active Camera:", "OV9281");
             } else {
                 c270.updateAtag();
 
@@ -91,6 +93,8 @@ public class FollowAprilTag extends LinearOpMode {
 
                 robotPose = c270.getRobotPose2d();
                 Drawing.drawRobot(robotPose);
+
+                telemetry.addData("Active Camera:", "Logitech C270");
             }
 
             controller.setCoeffs(kP, 0, kD, 0, kS);
@@ -98,7 +102,7 @@ public class FollowAprilTag extends LinearOpMode {
             double pv = bearing;
             double pow = controller.calculate(pv, 0f);
 
-            if (gamepad1.right_trigger >= 0.1) {
+            if (gamepad1.right_trigger >= 0.2) {
                 frontleft.setPower(pow);
                 backleft.setPower(pow);
                 frontright.setPower(-pow);
@@ -110,9 +114,9 @@ public class FollowAprilTag extends LinearOpMode {
                 backright.setPower(0);
             }
 
-            telemetry.addData("Pow", pow);
-            telemetry.addData("Pv", pv);
-            telemetry.addData("sp", 0);
+            telemetry.addData("Motor Power Magnitude", pow);
+            telemetry.addData("Process Variable", pv);
+            telemetry.addData("Set Point", 0);
 
             telemetry.update();
         }

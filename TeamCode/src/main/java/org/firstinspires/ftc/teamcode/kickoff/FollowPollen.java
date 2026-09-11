@@ -57,9 +57,9 @@ public class FollowPollen extends LinearOpMode {
             controller.setCoeffs(kP, 0, kD, 0, kS);
             double pow = controller.calculate(-biggest.x + (double) c270.resolutionWidth/2f, 0f);
 
-            telemetry.addData("Pow", pow);
-            telemetry.addData("Pv", -biggest.x + (double) c270.resolutionWidth / 2f);
-            telemetry.addData("sp", 0);
+            telemetry.addData("Motor Power Magnitude", pow);
+            telemetry.addData("Process Variable", -biggest.x + (double) c270.resolutionWidth / 2f);
+            telemetry.addData("Set Point", 0);
 
             if (gamepad1.right_trigger >= 0.1) {
                 frontleft.setPower(pow);
