@@ -167,7 +167,7 @@ public class ConceptVisionColorLocator_Circle extends LinearOpMode {
         VisionPortal portal = new VisionPortal.Builder()
                 .addProcessor(colorLocator)
                 .setCameraResolution(new Size(320, 240))
-                .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                .setCamera(hardwareMap.get(WebcamName.class, "c"))
                 .build();
 
         telemetry.setMsTransmissionInterval(100);   // Speed up telemetry updates for debugging.

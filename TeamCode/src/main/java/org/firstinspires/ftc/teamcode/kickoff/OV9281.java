@@ -51,7 +51,7 @@ public class OV9281 {
             0.0, 5, 2, 0);
 
     private boolean newReading = false;
-    Pose2D robotPose2d;
+    Pose2D robotPose2d = new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0);
 
     /*
         If all values are zero (no rotation), that implies the camera is pointing straight up.
@@ -182,11 +182,13 @@ public class OV9281 {
                 tele.addData("Sureness", detection.decisionMargin);
             }
 
-            robotPose2d = new Pose2D(
-                    DistanceUnit.INCH, detection.robotPose.getPosition().x,
-                    detection.robotPose.getPosition().y, AngleUnit.DEGREES,
-                    detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES)
-            );
+            if (detection.robotPose != null) {
+                robotPose2d = new Pose2D(
+                        DistanceUnit.INCH, detection.robotPose.getPosition().x,
+                        detection.robotPose.getPosition().y, AngleUnit.DEGREES,
+                        detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES)
+                );
+            }
         }
     }
 
@@ -198,6 +200,7 @@ public class OV9281 {
         return detectionsBuffer.size();
     }
 
+    public double getFPS() { return (double) visionPortal.getFps(); }
     public ArrayList<AprilTagDetection> getDetections() {
         return detectionsBuffer;
     }

@@ -17,9 +17,9 @@ import club.bitflip.utils.hardware.MotorEx;
 @Configurable
 @TeleOp
 public class FollowPollen extends LinearOpMode {
-    static double kP = 0.013;
+    static double kP = 0.015;
     static double kD = 0.00;
-    static double kS = 0.055;
+    static double kS = 0.0;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -62,6 +62,7 @@ public class FollowPollen extends LinearOpMode {
             telemetry.addData("Set Point", 0);
 
             if (gamepad1.right_trigger >= 0.1) {
+//            if (true) {
                 frontleft.setPower(pow);
                 backleft.setPower(pow);
                 frontright.setPower(-pow);

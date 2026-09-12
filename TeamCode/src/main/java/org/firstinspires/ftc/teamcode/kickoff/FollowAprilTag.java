@@ -20,24 +20,24 @@ import club.bitflip.utils.hardware.MotorEx;
 @Configurable
 @TeleOp
 public class FollowAprilTag extends LinearOpMode {
-    static double kP = 0.013;
-    static double kD = 0.00;
-    static double kS = 0.055;
+    static double kP = 0.0375;
+    static double kD = 0.0000;
+    static double kS = 0.0;
 
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), new TelemetryImplUpstreamSubmission(this));
 
-        int[] portalIDS = VisionPortal.makeMultiPortalView(2, VisionPortal.MultiPortalLayout.HORIZONTAL);
+//        int[] portalIDS = VisionPortal.makeMultiPortalView(2, VisionPortal.MultiPortalLayout.HORIZONTAL);
         SquidController controller = new SquidController(kP, 0.0, kD, 0.0, kS);
 
-        boolean usingC270 = false;
-        boolean lastUsingc270 = false;
+//        boolean usingC270 = false;
+//        boolean lastUsingc270 = false;
 
-        OV9281.viewContainerId = portalIDS[0];
-        C270.viewContainerId = portalIDS[1];
+//        OV9281.viewContainerId = portalIDS[0];
+//        C270.viewContainerId = portalIDS[1];
 
-        C270 c270 = new C270(hardwareMap, telemetry, false);
+//        C270 c270 = new C270(hardwareMap, telemetry, false);
         OV9281 ov9281 = new OV9281(hardwareMap, telemetry);
 
         MotorEx frontleft = new MotorEx("frontleft").zeroed().brake().reverse();
@@ -55,19 +55,11 @@ public class FollowAprilTag extends LinearOpMode {
         Drawing.init();
 
         while (opModeIsActive()) {
-            lastUsingc270 = usingC270;
+//            lastUsingc270 = usingC270;
 
-            if (gamepad1.b) usingC270 = !usingC270;
+//            if (gamepad1.b) usingC270 = !usingC270;
 
-            if (usingC270 && !lastUsingc270) {
-                ov9281.disableProcessor();
-                c270.enableProcessor();
-            } else if (!usingC270 && lastUsingc270) {
-                c270.disableProcessor();
-                ov9281.enableProcessor();
-            }
-
-            if (!usingC270) {
+//            if (!usingC270) {
                 ov9281.periodic();
 
                 if (ov9281.getDetectionsAmount() > 0) {
@@ -81,28 +73,29 @@ public class FollowAprilTag extends LinearOpMode {
                 Drawing.drawRobot(robotPose);
 
                 telemetry.addData("Active Camera:", "OV9281");
-            } else {
-                c270.updateAtag();
+//            } else {
+//                c270.updateAtag();
+//
+//                if (c270.getDetectionsAmount() > 0) {
+//                    detection = c270.getDetections().get(0);
+//                    bearing = detection.ftcPose.bearing;
+//                } else {
+//                    bearing = 0f;
+//                }
+//
+//                robotPose = c270.getRobotPose2d();
+//                Drawing.drawRobot(robotPose);
+//
+//                telemetry.addData("Active Camera:", "Logitech C270");
+//            }
 
-                if (c270.getDetectionsAmount() > 0) {
-                    detection = c270.getDetections().get(0);
-                    bearing = detection.ftcPose.bearing;
-                } else {
-                    bearing = 0f;
-                }
+            controller.setCoeffs(kP, 0, kD, 0, 0);
 
-                robotPose = c270.getRobotPose2d();
-                Drawing.drawRobot(robotPose);
-
-                telemetry.addData("Active Camera:", "Logitech C270");
-            }
-
-            controller.setCoeffs(kP, 0, kD, 0, kS);
-
-            double pv = bearing;
+            double pv = -bearing;
             double pow = controller.calculate(pv, 0f);
 
             if (gamepad1.right_trigger >= 0.2) {
+//            if (true) {
                 frontleft.setPower(pow);
                 backleft.setPower(pow);
                 frontright.setPower(-pow);
@@ -117,6 +110,7 @@ public class FollowAprilTag extends LinearOpMode {
             telemetry.addData("Motor Power Magnitude", pow);
             telemetry.addData("Process Variable", pv);
             telemetry.addData("Set Point", 0);
+            telemetry.addData("FPS", ov9281.getFPS());
 
             telemetry.update();
         }

@@ -41,7 +41,7 @@ public class C270 {
     private final HardwareMap hwMap;
     private final Telemetry tele;
 
-    private Pose2D robotPose2d;
+    Pose2D robotPose2d = new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0);
 
 
     private List<PollenHoughCircles.Pollen> pollenList = List.of();
