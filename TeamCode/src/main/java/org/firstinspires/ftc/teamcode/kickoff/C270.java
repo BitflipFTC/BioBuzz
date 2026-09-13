@@ -18,6 +18,7 @@ import org.firstinspires.ftc.vision.VisionProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class C270 {
     private PollenHoughCircles processor = null;
     private AprilTagProcessor atag = null;
-    private final ArrayList<AprilTagDetection> detectionsBuffer = new ArrayList<>();
+    private final ArrayList<AprilTagSingleDetection> detectionsBuffer = new ArrayList<>();
     private final VisionPortal visionPortal;
     private ExposureControl exposureControl;
     private GainControl gainControl;
@@ -165,7 +166,11 @@ public class C270 {
     public void updateAtag() {
         detectionsBuffer.clear();
         if (atag.getDetections() != null) {
-            detectionsBuffer.addAll(atag.getDetections());
+            for (AprilTagDetection detection : atag.getDetections()) {
+                if (detection instanceof AprilTagSingleDetection) {
+                    detectionsBuffer.add((AprilTagSingleDetection) detection);
+                }
+            }
         }
 
         int count = detectionsBuffer.size();
@@ -178,7 +183,7 @@ public class C270 {
 
         if (true)
             tele.addData("Detected April Tags", detectionsBuffer.size());
-        for (AprilTagDetection detection : detectionsBuffer) {
+        for (AprilTagSingleDetection detection : detectionsBuffer) {
             if (true) {
                 tele.addData("ID", detection.id);
                 tele.addData("Sureness", detection.decisionMargin);
@@ -194,7 +199,7 @@ public class C270 {
 
     public int getDetectionsAmount () { return detectionsBuffer.size(); }
 
-    public ArrayList<AprilTagDetection> getDetections() {
+    public ArrayList<AprilTagSingleDetection> getDetections() {
         return detectionsBuffer;
     }
 

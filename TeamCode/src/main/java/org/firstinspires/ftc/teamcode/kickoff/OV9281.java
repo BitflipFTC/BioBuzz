@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
@@ -39,8 +40,8 @@ public class OV9281 {
     private final HardwareMap hwMap;
     private final Telemetry tele;
 
-    private final ArrayList<AprilTagDetection> detectionsBuffer = new ArrayList<>();
-    private final ArrayList<AprilTagDetection> obeliskDetections = new ArrayList<>();
+    private final ArrayList<AprilTagSingleDetection> detectionsBuffer = new ArrayList<>();
+    private final ArrayList<AprilTagSingleDetection> obeliskDetections = new ArrayList<>();
 
     // https://ftc-docs.firstinspires.org/en/latest/apriltag/vision_portal/apriltag_localization/apriltag-localization.html
     /*
@@ -160,9 +161,14 @@ public class OV9281 {
     }
 
     public void periodic() {
+        AprilTagGameDatabase.getCurrentGameTagLibrary().getAllTags();
         detectionsBuffer.clear();
         if (aprilTag.getDetections() != null) {
-            detectionsBuffer.addAll(aprilTag.getDetections());
+            for (AprilTagDetection detection : aprilTag.getDetections()) {
+                if (detection instanceof AprilTagSingleDetection) {
+                    detectionsBuffer.add((AprilTagSingleDetection) detection);
+                }
+            }
         }
 
         int count = detectionsBuffer.size();
@@ -176,7 +182,7 @@ public class OV9281 {
 
         if (debugTelemetry)
             tele.addData("Detected April Tags", detectionsBuffer.size());
-        for (AprilTagDetection detection : detectionsBuffer) {
+        for (AprilTagSingleDetection detection : detectionsBuffer) {
             if (debugTelemetry) {
                 tele.addData("ID", detection.id);
                 tele.addData("Sureness", detection.decisionMargin);
@@ -201,7 +207,7 @@ public class OV9281 {
     }
 
     public double getFPS() { return (double) visionPortal.getFps(); }
-    public ArrayList<AprilTagDetection> getDetections() {
+    public ArrayList<AprilTagSingleDetection> getDetections() {
         return detectionsBuffer;
     }
 
