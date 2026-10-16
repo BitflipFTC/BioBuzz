@@ -7,7 +7,6 @@ import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
-import com.qualcomm.robotcore.hardware.DcMotorEx
 
 @TeleOp(name = "Tuning shooter")
 class Shooter : LinearOpMode() {
@@ -17,18 +16,18 @@ class Shooter : LinearOpMode() {
 
         var output = 0.0
         var tbh = 0.0
-        val gain = 0.001
+        val gain = 0.0001
 
-        val flywheelMotor = MotorEx("shooter")
-        val servo = ServoEx("servo")
+        val flywheelMotor = MotorEx("shooter").reverse()
+        val hoodServo = ServoEx("hood")
+        val hoodMinPos = 0.54
+
         var flywheelRPM = 0.0
         var targetFlywheelRPM = 0.0
         var error = 0.0
         var lastError = 0.0
 
-        var servoPollenPos = 0.5
-        var servoNectarPos = 1.0
-        var servoPos = servoNectarPos
+        var servoPos = hoodMinPos
 
         waitForStart()
         while (opModeIsActive()) {
@@ -40,14 +39,6 @@ class Shooter : LinearOpMode() {
                 targetFlywheelRPM -= 125.0
             }
 
-            if (gamepad1.dpadLeftWasPressed()) {
-                servoPos = servoPollenPos
-            }
-
-            if (gamepad1.dpadRightWasPressed()) {
-                servoPos = servoNectarPos
-            }
-
             if (gamepad1.rightBumperWasPressed()) {
                 servoPos += 0.025
             }
@@ -56,20 +47,12 @@ class Shooter : LinearOpMode() {
                 servoPos -= 0.025
             }
 
-            if (gamepad1.aWasPressed()) {
-                servoPollenPos = servoPos
-            }
-
-            if (gamepad1.bWasPressed()) {
-                servoNectarPos = servoPos
-            }
-
             flywheelRPM = (flywheelMotor.velocity / 28) * 60
 
             lastError = error
             error = targetFlywheelRPM - flywheelRPM
 
-            if (error >= 40.0) {
+            if (error >= 100.0) {
                 flywheelMotor.power = 1.0
                 output = targetFlywheelRPM * (1.0/5000.0)
                 tbh = output
@@ -87,11 +70,8 @@ class Shooter : LinearOpMode() {
                 flywheelMotor.power = output
             }
 
-            servoPos = servoPos.coerceIn(0.0,1.0)
-            servo.position = servoPos
-
-
-
+            servoPos = servoPos.coerceIn(hoodMinPos ,1.0)
+            hoodServo.position = servoPos
 
             telemetry.addData("Flywheel RPM", flywheelRPM)
             telemetry.addData("Target Flywheel RPM", targetFlywheelRPM)
@@ -99,7 +79,6 @@ class Shooter : LinearOpMode() {
             telemetry.addData("Servo Position", servoPos)
             telemetry.addLine()
             telemetry.addLine("Press UP to increase RPM, DOWN to decrease RPM")
-            telemetry.addLine("Press RIGHT to switch to nectar, LEFT to switch to pollen")
             telemetry.addLine("Press LB to decrease servo position, RB to increase servo position")
             telemetry.addLine("Press A to assign pollen position, B to assign nectar position")
             telemetry.update()
