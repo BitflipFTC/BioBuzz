@@ -32,6 +32,7 @@ import com.qualcomm.robotcore.hardware.AnalogSensor;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareDevice;
@@ -40,6 +41,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.ArrayList;
@@ -106,7 +108,7 @@ public class UtilityTestHardware extends OpMode {
             telemetry.addData("Device Type", hardwareDevice.getDeviceName());
             telemetry.addData("Connection Info", hardwareDevice.getConnectionInfo());
             if (hardwareDevice instanceof DcMotor) {
-                testMotor((DcMotor) hardwareDevice);
+                testMotor((DcMotorEx) hardwareDevice);
             } else if (hardwareDevice instanceof CRServo) {
                 testCRServo((CRServo) hardwareDevice);
             } else if (hardwareDevice instanceof Servo) {
@@ -137,12 +139,13 @@ public class UtilityTestHardware extends OpMode {
         }
     }
 
-    void testMotor(DcMotor motor) {
+    void testMotor(DcMotorEx motor) {
         telemetry.addData("Use Left joystick Y", "to set motor power");
         telemetry.addData("Use Right Bumper", "to set motor power to value");
         double power = -gamepad1.left_stick_y;
         telemetry.addData("Encoder", motor.getCurrentPosition());
         telemetry.addData("Value", power);
+        telemetry.addData("Current", motor.getCurrent(CurrentUnit.AMPS));
         if (gamepad1.right_bumper) {
             telemetry.addData("Motor power set to", power);
             motor.setPower(power);

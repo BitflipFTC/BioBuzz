@@ -13,12 +13,13 @@ apply plugin: 'com.android.application'
 buildscript {
     repositories {
         mavenCentral()
+        google()
         maven {
             url "https://repo.dairy.foundation/releases"
         }
     }
     dependencies {
-        classpath "dev.frozenmilk:Load:0.2.4"
+        classpath "dev.frozenmilk:Load:0.3.2"
     }
 }
 
@@ -44,20 +45,11 @@ android {
     }
 }
 
-repositories {
-    maven {
-        name = "nullftcReleases"
-        url = "https://maven.nullftc.dev/releases"
-    }
-}
-
 dependencies {
     implementation project(':FtcRobotController')
-
-    implementation "dev.nullftc:Profiler:SNAPSHOT-8e16b25"
-//    implementation ("club.bitflip:utils:1.0.2") {
-//        exclude group: 'com.bylazar'
-//    }
-
-    implementation 'com.bylazar:fullpanels:1.0.12'
+    implementation("dev.frozenmilk.sinister:Sloth:0.3.2")
+    implementation 'com.bylazar:fullpanels:1.0.18'
+//    implementation 'dev.nextftc.v2:control:0.2.1'
+//    implementation 'dev.nextftc.v2:hardware:0.2.1'
+//    implementation 'dev.nextftc.v2:robot:0.2.1'
 }

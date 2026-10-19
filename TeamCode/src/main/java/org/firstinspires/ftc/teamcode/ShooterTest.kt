@@ -7,16 +7,18 @@ import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import com.qualcomm.robotcore.eventloop.opmode.Utility
 
-@TeleOp(name = "Tuning shooter")
-class Shooter : LinearOpMode() {
+@Utility(name = "Tuning shooter")
+class ShooterTest : LinearOpMode() {
     override fun runOpMode() {
 
         telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
         var output = 0.0
         var tbh = 0.0
-        val gain = 0.0001
+        //todo tune ts highkey
+        val gain = 0.0005
 
         val flywheelMotor = MotorEx("shooter").reverse()
         val hoodServo = ServoEx("hood")
@@ -39,11 +41,11 @@ class Shooter : LinearOpMode() {
                 targetFlywheelRPM -= 125.0
             }
 
-            if (gamepad1.rightBumperWasPressed()) {
+            if (gamepad1.dpadRightWasPressed()) {
                 servoPos += 0.025
             }
 
-            if (gamepad1.leftBumperWasPressed()) {
+            if (gamepad1.dpadLeftWasPressed()) {
                 servoPos -= 0.025
             }
 
