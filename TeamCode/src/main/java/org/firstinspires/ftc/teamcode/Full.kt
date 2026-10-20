@@ -4,6 +4,8 @@ import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.pedropathing.ivy.Scheduler
+import com.pedropathing.ivy.behaviors.EndCondition
+import com.pedropathing.ivy.behaviors.InterruptedBehavior
 import com.pedropathing.ivy.commands.Commands.instant
 import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.commands.Commands.waitUntil
@@ -20,6 +22,14 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret
 
 @TeleOp(name = "buzz light-year")
 class Full : LinearOpMode() {
+    enum class Alliance {
+        RED,
+        BLUE
+    }
+
+    companion object {
+        var alliance: Alliance? = null
+    }
 
     override fun runOpMode() {
         Scheduler.reset()
@@ -35,6 +45,14 @@ class Full : LinearOpMode() {
 
         val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
 
+        val shootInterrupted = sequential(
+            instant {intake.off()},
+            waitMs(100.0),
+            instant{gate.close()},
+            waitMs(50.0),
+            instant {intake.on()}
+        )
+
         val shoot = waitUntil(shooter::readyToShoot).then(
             deadline(
                 waitMs(3000.0),
@@ -42,20 +60,34 @@ class Full : LinearOpMode() {
                     instant { intake.mode = Intake.Mode.SHOOTING },
                     instant { gate.open() },
                 )
-            ).setEnd { gate.close() }
+            ).setEnd { endCondition -> if (endCondition == EndCondition.INTERRUPTED) shootInterrupted.schedule() else gate.close()}
                 .requiring(gate, shooter, intake)
+                .setInterruptedBehavior(InterruptedBehavior.SUSPEND)
         )
 
+        while (opModeInInit()) {
+            if (gamepad1.crossWasPressed()) {
+                alliance = Alliance.BLUE
+            }
 
-        telemetry.run {
-            addData("Initialized", true)
-            update()
+            if (gamepad1.circleWasPressed()) {
+                alliance = Alliance.RED
+            }
+
+            telemetry.run {
+                addData("Initialized", true)
+                addLine("Press Circle for red alliance, Cross for blue")
+                addData("Current Alliance", alliance?.name ?: "Null")
+                update()
+            }
         }
 
-        waitForStart()
+        turret.alliance = alliance
+        turret.robotPose = follower
+        turret.trackGoalCommand.schedule()
 
-        turret.position = 0.5
         gate.close()
+        gamepad1.triggerThreshold = 0.15f
 
         while (opModeIsActive()) {
 
@@ -83,6 +115,10 @@ class Full : LinearOpMode() {
                 // flat against wall
                 shooter.hoodPosition = 0.7
                 shooter.targetFlywheelRPM = 3600.0
+            }
+
+            if (gamepad1.rightTriggerWasPressed()) {
+                shoot.schedule()
             }
 
             if (gamepad1.dpadUpWasPressed()) {
