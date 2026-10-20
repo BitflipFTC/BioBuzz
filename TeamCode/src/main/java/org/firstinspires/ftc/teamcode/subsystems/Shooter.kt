@@ -60,6 +60,13 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
 
             motor.power = output
         }
+
+        telemetry.run {
+            addData("Target flywheel RPM", targetFlywheelRPM)
+            addData("Actual flywheel RPM", flywheelRPM)
+            addData("Hood position", hoodPosition)
+            addData("Motor power", output)
+        }
     }
 
     fun readyToShoot() = (error <= 100.0)

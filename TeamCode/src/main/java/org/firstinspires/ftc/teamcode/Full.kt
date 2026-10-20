@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
-import club.bitflip.utils.hardware.ServoEx
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.pedropathing.ivy.Scheduler
@@ -17,33 +16,24 @@ import org.firstinspires.ftc.teamcode.subsystems.Flowertake
 import org.firstinspires.ftc.teamcode.subsystems.Gate
 import org.firstinspires.ftc.teamcode.subsystems.Intake
 import org.firstinspires.ftc.teamcode.subsystems.Shooter
+import org.firstinspires.ftc.teamcode.subsystems.Turret
 
 @TeleOp(name = "buzz light-year")
 class Full : LinearOpMode() {
-    lateinit var turret1: ServoEx
-    lateinit var turret2: ServoEx
-
-    fun turretTo(target: Double) {
-        turret1.position = target
-        turret2.position = target
-    }
 
     override fun runOpMode() {
         Scheduler.reset()
 
-        telemetry =
-            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
         val gate = Gate(hardwareMap, telemetry)
         val shooter = Shooter(hardwareMap, telemetry)
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
         val drivetrain = Drivetrain(hardwareMap, telemetry)
+        val turret = Turret(hardwareMap, telemetry)
 
-        val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain)
-
-        turret1 = ServoEx("turret1")
-        turret2 = ServoEx("turret2")
+        val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
 
         val shoot = waitUntil(shooter::readyToShoot).then(
             deadline(
@@ -64,11 +54,12 @@ class Full : LinearOpMode() {
 
         waitForStart()
 
+        turret.position = 0.5
         gate.close()
 
         while (opModeIsActive()) {
 
-            turretTo(0.49)
+            turret.position = 0.49
 
             val x = gamepad1.left_stick_x.toDouble()
             val y = -gamepad1.left_stick_y.toDouble()
