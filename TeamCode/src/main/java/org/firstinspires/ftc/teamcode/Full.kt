@@ -13,6 +13,7 @@ import com.pedropathing.ivy.groups.Groups.deadline
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
 import org.firstinspires.ftc.teamcode.subsystems.Gate
@@ -42,10 +43,11 @@ class Full : LinearOpMode() {
         val flowertake = Flowertake(hardwareMap, telemetry)
         val drivetrain = Drivetrain(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
+        val follower = Constants.create(hardwareMap)
 
         val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
 
-        val shootInterrupted = sequential(
+        fun shootInterrupted() = sequential(
             instant {intake.off()},
             waitMs(100.0),
             instant{gate.close()},
@@ -53,14 +55,14 @@ class Full : LinearOpMode() {
             instant {intake.on()}
         )
 
-        val shoot = waitUntil(shooter::readyToShoot).then(
+        fun shoot() = waitUntil(shooter::readyToShoot).then(
             deadline(
                 waitMs(3000.0),
                 sequential(
                     instant { intake.mode = Intake.Mode.SHOOTING },
                     instant { gate.open() },
                 )
-            ).setEnd { endCondition -> if (endCondition == EndCondition.INTERRUPTED) shootInterrupted.schedule() else gate.close()}
+            ).setEnd { endCondition -> if (endCondition == EndCondition.INTERRUPTED) shootInterrupted().schedule() else gate.close()}
                 .requiring(gate, shooter, intake)
                 .setInterruptedBehavior(InterruptedBehavior.SUSPEND)
         )
@@ -83,8 +85,8 @@ class Full : LinearOpMode() {
         }
 
         turret.alliance = alliance
-        turret.robotPose = follower
-        turret.trackGoalCommand.schedule()
+//        turret.robotPose = follower
+//        turret.trackGoalCommand.schedule()
 
         gate.close()
         gamepad1.triggerThreshold = 0.15f
@@ -118,7 +120,7 @@ class Full : LinearOpMode() {
             }
 
             if (gamepad1.rightTriggerWasPressed()) {
-                shoot.schedule()
+                shoot().schedule()
             }
 
             if (gamepad1.dpadUpWasPressed()) {
@@ -136,6 +138,17 @@ class Full : LinearOpMode() {
             if (gamepad1.dpadLeftWasPressed()) {
                 shooter.hoodPosition -= 0.025
             }
+
+//            if (gamepad1.touchpadWasPressed()) {
+//                if (turret.trackGoalCommand.isScheduled) {
+//                    turret.trackGoalCommand.cancel()
+//                    turret.position = 0.5
+//                } else {
+//                    turret.trackGoalCommand.schedule()
+//                }
+//            }
+
+            Scheduler.execute()
 
             subsystems.forEach { it.loop() }
 
