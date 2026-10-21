@@ -22,6 +22,6 @@ dependencies {
     implementation 'com.pedropathing:tuning:1.0.2'
     implementation 'com.pedropathing.ivy:core:1.1.1'
     implementation 'com.pedropathing.ivy:pedro:1.1.1'
-    implementation 'club.bitflip:utils:1.0.4'
+    implementation 'club.bitflip:utils:1.0.5'
 }
 
