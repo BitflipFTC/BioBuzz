@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
+import com.bylazar.utils.LoopTimer
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.behaviors.EndCondition
 import com.pedropathing.ivy.behaviors.InterruptedBehavior
@@ -11,8 +12,13 @@ import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.commands.Commands.waitUntil
 import com.pedropathing.ivy.groups.Groups.deadline
 import com.pedropathing.ivy.groups.Groups.sequential
+import com.pedropathing.math.Pose
+import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
@@ -44,28 +50,10 @@ class Full : LinearOpMode() {
         val drivetrain = Drivetrain(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
         val follower = Constants.create(hardwareMap)
+        follower.setPose(Pose(83.0, 132.0, Math.toRadians(270.0)))
+        Drawing.init()
 
         val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
-
-        fun shootInterrupted() = sequential(
-            instant {intake.off()},
-            waitMs(100.0),
-            instant{gate.close()},
-            waitMs(50.0),
-            instant {intake.on()}
-        )
-
-        fun shoot() = waitUntil(shooter::readyToShoot).then(
-            deadline(
-                waitMs(3000.0),
-                sequential(
-                    instant { intake.mode = Intake.Mode.SHOOTING },
-                    instant { gate.open() },
-                )
-            ).setEnd { endCondition -> if (endCondition == EndCondition.INTERRUPTED) shootInterrupted().schedule() else gate.close()}
-                .requiring(gate, shooter, intake)
-                .setInterruptedBehavior(InterruptedBehavior.SUSPEND)
-        )
 
         while (opModeInInit()) {
             if (gamepad1.crossWasPressed()) {
@@ -82,18 +70,30 @@ class Full : LinearOpMode() {
                 addData("Current Alliance", alliance?.name ?: "Null")
                 update()
             }
+
+            shooter.hoodPosition = 0.5
+            gate.close()
         }
 
         turret.alliance = alliance
-//        turret.robotPose = follower
+//        turret.position = 0.5
+        turret.robotPose = follower.pose()
 //        turret.trackGoalCommand.schedule()
 
         gate.close()
-        gamepad1.triggerThreshold = 0.15f
+        gamepad1.triggerThreshold = 0.25f
 
+        val allHubs = hardwareMap.getAll(LynxModule::class.java)
+        allHubs.forEach { hub -> hub.bulkCachingMode = LynxModule.BulkCachingMode.MANUAL }
+
+        val loopTimer = LoopTimer(10)
+
+        loopTimer.start()
         while (opModeIsActive()) {
+            allHubs.forEach { hub -> hub.clearBulkCache() }
 
-            turret.position = 0.49
+            loopTimer.end()
+            loopTimer.start()
 
             val x = gamepad1.left_stick_x.toDouble()
             val y = -gamepad1.left_stick_y.toDouble()
@@ -109,18 +109,28 @@ class Full : LinearOpMode() {
                 intake.toggle()
             }
 
+            if (gamepad1.cross) {
+                intake.reversed = true
+            } else {
+                intake.reversed = false
+            }
+
             if (gamepad1.bWasPressed()) {
                 flowertake.toggle()
             }
 
             if (gamepad1.yWasPressed()) {
                 // flat against wall
-                shooter.hoodPosition = 0.7
-                shooter.targetFlywheelRPM = 3600.0
+                shooter.hoodPosition = 0.6
+                shooter.targetFlywheelRPM = 3000.0
             }
 
             if (gamepad1.rightTriggerWasPressed()) {
-                shoot().schedule()
+                gate.open()
+            }
+
+            if (gamepad1.rightTriggerWasReleased()) {
+                gate.close()
             }
 
             if (gamepad1.dpadUpWasPressed()) {
@@ -139,19 +149,30 @@ class Full : LinearOpMode() {
                 shooter.hoodPosition -= 0.025
             }
 
-//            if (gamepad1.touchpadWasPressed()) {
-//                if (turret.trackGoalCommand.isScheduled) {
-//                    turret.trackGoalCommand.cancel()
-//                    turret.position = 0.5
-//                } else {
-//                    turret.trackGoalCommand.schedule()
-//                }
-//            }
+            if (gamepad1.left_trigger >= 0.25) {
+                turret.trackGoal()
+            }
+
+            if (gamepad1.startWasPressed()) {
+                follower.setPose(Pose(83.0, 132.0, Math.toRadians(270.0)))
+            }
+
+            if (gamepad1.backWasPressed()) {
+                follower.setPose(Pose(83.0, 9.5, Math.toRadians(90.0)))
+            }
+
+            turret.robotPose = follower.pose()
 
             Scheduler.execute()
 
             subsystems.forEach { it.loop() }
 
+            follower.update()
+
+            telemetry.addLine()
+            telemetry.addData("Robot pos", "x: %.2f, y: %.2f, h: %.2f", follower.pose().x(), follower.pose().y(), follower.pose().heading())
+            telemetry.addData("Loop ms", "%05.2f", loopTimer.ms.toDouble())
+            Drawing.drawRobot(Pose2D(DistanceUnit.INCH, follower.pose().x(), follower.pose().y(), AngleUnit.RADIANS, follower.pose().heading()))
             telemetry.update()
         }
     }

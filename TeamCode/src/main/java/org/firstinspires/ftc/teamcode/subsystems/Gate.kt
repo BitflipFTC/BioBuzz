@@ -19,7 +19,6 @@ class Gate(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareM
         }
 
     init {
-        servo.scaleRange(State.OPEN.position, State.CLOSED.position)
         close()
     }
 

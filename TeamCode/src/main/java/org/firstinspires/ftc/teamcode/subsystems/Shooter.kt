@@ -11,12 +11,12 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
 
     companion object {
         @JvmField
-        var gain = 0.0003
+        var gain = 0.00002
     }
 
     private val motor = MotorEx("shooter").reverse().float()
     private val hood = ServoEx("hood")
-    private val hoodMinPos = 0.54
+    private val hoodMinPos = 0.5
     private var error = 0.0
     private var lastError = 0.0
 
@@ -43,7 +43,7 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
         lastError = error
         error = targetFlywheelRPM - flywheelRPM
 
-        if (error >= 100.0) {
+        if (error >= 60.0) {
             motor.power = 1.0
             output = targetFlywheelRPM * (1.0 / 5000.0)
             tbh = output

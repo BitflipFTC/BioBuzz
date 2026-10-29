@@ -41,11 +41,11 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
     val turretPose: Pose
         get() = robotPose
 
-    var position = 0.5
+    var position = 0.0
         set(newPosition) {
-            field = newPosition
             turret1.position = newPosition
             turret2.position = newPosition
+            field = newPosition
         }
 
     var degrees: Double
@@ -62,7 +62,7 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
                 clippedAngle -= 360.0
             }
 
-            position = (((clippedAngle) / (2 * 160)) + 0.5).coerceIn(0.0, 1.0)
+            position = (((clippedAngle) / (2 * 160)) + 0.5).coerceIn(0.1, 0.9) //todo wiring
         }
 
     val trackGoalCommand: Command = Commands.infinite(::trackGoal)
@@ -80,5 +80,6 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
         val robotHeading = Math.toDegrees(normalizeRadians(robotPose.heading(), false))
 
         degrees = bearing - robotHeading
+        telemetry.addData("distance to goal", goalPose.distance(robotPose))
     }
 }

@@ -48,7 +48,7 @@ android {
 dependencies {
     implementation project(':FtcRobotController')
     implementation("dev.frozenmilk.sinister:Sloth:0.3.2")
-    implementation 'com.bylazar:fullpanels:1.0.18'
+    implementation 'com.bylazar:fullpanels:1.0.19'
 //    implementation 'dev.nextftc.v2:control:0.2.1'
 //    implementation 'dev.nextftc.v2:hardware:0.2.1'
 //    implementation 'dev.nextftc.v2:robot:0.2.1'
