@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.auto
+package org.firstinspires.ftc.teamcode.opmodes.auto.TPauto
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
@@ -10,8 +10,8 @@ import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.ivy.groups.Groups
 import com.pedropathing.ivy.pedro.PedroCommands
+import com.pedropathing.math.Pose
 import com.qualcomm.hardware.lynx.LynxModule
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
@@ -26,18 +26,29 @@ import org.firstinspires.ftc.teamcode.subsystems.Intake
 import org.firstinspires.ftc.teamcode.subsystems.Shooter
 import org.firstinspires.ftc.teamcode.subsystems.Turret
 
-@Autonomous
-class RedAuto : LinearOpMode() {
+open class TPAuto(
+    val alliance: Full.Alliance
+) : LinearOpMode() {
+
     val factory = PoseFactory.degrees();
-    val startPose = factory.of(83.0, 132.0, 270.0)
-    val offWallPose = factory.of(83.0, 128.0, 270.0)
-    val parkPose = factory.of(128.0, 40.0, 270.0)
+
+    var startPose: Pose = factory.of(83.0, 132.0, 270.0)
+    var offWallPose: Pose = factory.of(83.0, 128.0, 270.0)
+    var parkPose: Pose = factory.of(128.0, 40.0, 270.0)
 
     fun startToOffWall() = Paths.line(startPose, offWallPose).linear(startPose, parkPose)
     fun offWallToPark() = Paths.line(offWallPose, parkPose).linear(offWallPose, parkPose)
 
     override fun runOpMode() {
         Scheduler.reset()
+
+        if (alliance == Full.Alliance.BLUE) {
+            factory.mirrorAroundPoint(Pose(70.75, 70.75))
+
+            startPose = factory.of(83.0, 132.0, 270.0)
+            offWallPose = factory.of(83.0, 128.0, 270.0)
+            parkPose = factory.of(128.0, 40.0, 270.0)
+        }
 
         telemetry =
             JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
