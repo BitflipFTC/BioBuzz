@@ -11,6 +11,7 @@ import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.ivy.groups.Groups
 import com.pedropathing.ivy.pedro.PedroCommands
 import com.pedropathing.math.Pose
+import com.pedropathing.paths.Path
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
@@ -36,8 +37,8 @@ open class TPAuto(
     var offWallPose: Pose = factory.of(83.0, 128.0, 270.0)
     var parkPose: Pose = factory.of(128.0, 40.0, 270.0)
 
-    fun startToOffWall() = Paths.line(startPose, offWallPose).linear(startPose, parkPose)
-    fun offWallToPark() = Paths.line(offWallPose, parkPose).linear(offWallPose, parkPose)
+    fun startToOffWall(): Path = Paths.line(startPose, offWallPose).linear(startPose, parkPose)
+    fun offWallToPark(): Path = Paths.line(offWallPose, parkPose).linear(offWallPose, parkPose)
 
     override fun runOpMode() {
         Scheduler.reset()
