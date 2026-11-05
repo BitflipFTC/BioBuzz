@@ -1,20 +1,20 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.test
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import club.bitflip.utils.hardware.ServoEx
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.eventloop.opmode.Utility
 
 @Utility
-class TurretTest: LinearOpMode() {
+class    TurretTest: LinearOpMode() {
     lateinit var turret1: ServoEx
     lateinit var turret2: ServoEx
 
     override fun runOpMode() {
-        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry =
+            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
         turret1 = ServoEx("turret1")
         turret2 = ServoEx("turret2")
 

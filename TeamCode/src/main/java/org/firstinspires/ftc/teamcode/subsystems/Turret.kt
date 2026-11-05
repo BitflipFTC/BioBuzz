@@ -7,7 +7,7 @@ import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.math.Pose
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.external.Telemetry
-import org.firstinspires.ftc.teamcode.Full
+import org.firstinspires.ftc.teamcode.opmodes.teleop.Full
 import kotlin.math.atan2
 
 class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareMap, telemetry) {

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.auto
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
@@ -6,22 +6,18 @@ import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
 import com.pedropathing.api.Paths
 import com.pedropathing.api.PoseFactory
-import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.commands.Commands
-import com.pedropathing.ivy.commands.Commands.instant
-import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.groups.Groups
 import com.pedropathing.ivy.pedro.PedroCommands
-import com.pedropathing.math.Pose
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
-import org.firstinspires.ftc.teamcode.Full.Alliance
-import org.firstinspires.ftc.teamcode.Full.Companion.alliance
+import org.firstinspires.ftc.teamcode.Drawing
+import org.firstinspires.ftc.teamcode.opmodes.teleop.Full
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
@@ -31,11 +27,11 @@ import org.firstinspires.ftc.teamcode.subsystems.Shooter
 import org.firstinspires.ftc.teamcode.subsystems.Turret
 
 @Autonomous
-class BlueAuto : LinearOpMode() {
-        val factory = PoseFactory.degrees();
-        val startPose = factory.of(59.0, 9.5, 90.0)
-        val offWallPose = factory.of(59.0, 12.0, 90.0)
-        val parkPose = factory.of(16.0, 104.0, 90.0)
+class RedAuto : LinearOpMode() {
+    val factory = PoseFactory.degrees();
+    val startPose = factory.of(83.0, 132.0, 270.0)
+    val offWallPose = factory.of(83.0, 128.0, 270.0)
+    val parkPose = factory.of(128.0, 40.0, 270.0)
 
     fun startToOffWall() = Paths.line(startPose, offWallPose).linear(startPose, parkPose)
     fun offWallToPark() = Paths.line(offWallPose, parkPose).linear(offWallPose, parkPose)
@@ -43,7 +39,8 @@ class BlueAuto : LinearOpMode() {
     override fun runOpMode() {
         Scheduler.reset()
 
-        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry =
+            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
         val gate = Gate(hardwareMap, telemetry)
         val shooter = Shooter(hardwareMap, telemetry)
@@ -58,7 +55,7 @@ class BlueAuto : LinearOpMode() {
         val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
 
         waitForStart()
-        turret.alliance = Alliance.BLUE
+        turret.alliance = Full.Alliance.BLUE
 //        turret.position = 0.5
         turret.robotPose = follower.pose()
 //        turret.trackGoalCommand.schedule()
@@ -72,18 +69,18 @@ class BlueAuto : LinearOpMode() {
 
         val auto = Groups.sequential(
             PedroCommands.follow(follower, startToOffWall()),
-            instant {intake.on()},
-            waitMs(1000.0),
-            instant {gate.open()},
-            waitMs(5000.0),
-            instant{gate.close()},
+            Commands.instant { intake.on() },
+            Commands.waitMs(1000.0),
+            Commands.instant { gate.open() },
+            Commands.waitMs(5000.0),
+            Commands.instant { gate.close() },
             PedroCommands.follow(follower, offWallToPark())
         )
 
         waitForStart()
 
-        turret.trackGoalCommand.schedule()
         auto.schedule()
+        turret.trackGoalCommand.schedule()
         // flat against wall
         shooter.hoodPosition = 0.6
         shooter.targetFlywheelRPM = 3000.0
@@ -106,7 +103,15 @@ class BlueAuto : LinearOpMode() {
             telemetry.addLine()
             telemetry.addData("Robot pos", "x: %.2f, y: %.2f, h: %.2f", follower.pose().x(), follower.pose().y(), follower.pose().heading())
             telemetry.addData("Loop ms", "%05.2f", loopTimer.ms.toDouble())
-            Drawing.drawRobot(Pose2D(DistanceUnit.INCH, follower.pose().x(), follower.pose().y(), AngleUnit.RADIANS, follower.pose().heading()))
+            Drawing.drawRobot(
+                Pose2D(
+                    DistanceUnit.INCH,
+                    follower.pose().x(),
+                    follower.pose().y(),
+                    AngleUnit.RADIANS,
+                    follower.pose().heading()
+                )
+            )
             telemetry.update()
         }
     }

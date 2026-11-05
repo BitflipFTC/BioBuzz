@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.teleop
 
 import club.bitflip.utils.PIDController
 import com.bylazar.configurables.annotations.Configurable
@@ -7,15 +7,11 @@ import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver
 import com.qualcomm.hardware.lynx.LynxModule
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot
-import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.DcMotorSimple
-import com.qualcomm.robotcore.hardware.IMU
-import org.firstinspires.ftc.robotcontroller.external.samples.SensorGoBildaPinpoint
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
@@ -48,7 +44,7 @@ class HeadingCorrectDrive : LinearOpMode() {
 
     var driveSpeed : Double = 1.0
 
-    val headingController: PIDController = PIDController(kP,kI, kD)
+    val headingController: PIDController = PIDController(kP, kI, kD)
 
     override fun runOpMode() {
         telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
@@ -76,7 +72,8 @@ class HeadingCorrectDrive : LinearOpMode() {
 
         pp.setOffsets(-4.1222841758, -1.31809841, DistanceUnit.INCH)
         pp.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-        pp.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
+        pp.setEncoderDirections(
+            GoBildaPinpointDriver.EncoderDirection.FORWARD,
             GoBildaPinpointDriver.EncoderDirection.FORWARD);
         pp.resetPosAndIMU()
 

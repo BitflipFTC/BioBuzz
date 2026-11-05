@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.test
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import club.bitflip.utils.hardware.MotorEx
@@ -6,14 +6,14 @@ import club.bitflip.utils.hardware.ServoEx
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.eventloop.opmode.Utility
 
 @Utility(name = "Tuning shooter")
 class ShooterTest : LinearOpMode() {
     override fun runOpMode() {
 
-        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry =
+            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
         var output = 0.0
         var tbh = 0.0

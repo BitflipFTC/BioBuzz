@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.teleop
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import club.bitflip.utils.hardware.MotorEx
@@ -23,7 +23,8 @@ class DefaultDrive: LinearOpMode() {
     private var currentSpeed: Speed = Speed.MED
 
     override fun runOpMode() {
-        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry =
+            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
         val frontleft = MotorEx("frontleft").zeroed().brake().reverse()
         val frontright = MotorEx("frontright").zeroed().brake()
         val backleft = MotorEx("backleft").zeroed().brake().reverse()

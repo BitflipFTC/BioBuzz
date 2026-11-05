@@ -1,17 +1,10 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.opmodes.teleop
 
 import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
 import com.pedropathing.ivy.Scheduler
-import com.pedropathing.ivy.behaviors.EndCondition
-import com.pedropathing.ivy.behaviors.InterruptedBehavior
-import com.pedropathing.ivy.commands.Commands.instant
-import com.pedropathing.ivy.commands.Commands.waitMs
-import com.pedropathing.ivy.commands.Commands.waitUntil
-import com.pedropathing.ivy.groups.Groups.deadline
-import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.math.Pose
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
@@ -19,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
+import org.firstinspires.ftc.teamcode.Drawing
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
@@ -41,7 +35,8 @@ class Full : LinearOpMode() {
     override fun runOpMode() {
         Scheduler.reset()
 
-        telemetry = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
+        telemetry =
+            JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
         val gate = Gate(hardwareMap, telemetry)
         val shooter = Shooter(hardwareMap, telemetry)
@@ -172,7 +167,15 @@ class Full : LinearOpMode() {
             telemetry.addLine()
             telemetry.addData("Robot pos", "x: %.2f, y: %.2f, h: %.2f", follower.pose().x(), follower.pose().y(), follower.pose().heading())
             telemetry.addData("Loop ms", "%05.2f", loopTimer.ms.toDouble())
-            Drawing.drawRobot(Pose2D(DistanceUnit.INCH, follower.pose().x(), follower.pose().y(), AngleUnit.RADIANS, follower.pose().heading()))
+            Drawing.drawRobot(
+                Pose2D(
+                    DistanceUnit.INCH,
+                    follower.pose().x(),
+                    follower.pose().y(),
+                    AngleUnit.RADIANS,
+                    follower.pose().heading()
+                )
+            )
             telemetry.update()
         }
     }
