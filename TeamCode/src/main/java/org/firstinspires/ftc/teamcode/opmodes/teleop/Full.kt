@@ -4,6 +4,8 @@ import club.bitflip.utils.TelemetryImplUpstreamSubmission
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
+import com.pedropathing.api.PoseFactory
+import com.pedropathing.follower.ManualDrive
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.math.Pose
 import com.qualcomm.hardware.lynx.LynxModule
@@ -35,6 +37,8 @@ class Full : LinearOpMode() {
     override fun runOpMode() {
         Scheduler.reset()
 
+        val factory = PoseFactory.degrees()
+
         telemetry =
             JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
@@ -42,13 +46,12 @@ class Full : LinearOpMode() {
         val shooter = Shooter(hardwareMap, telemetry)
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
-        val drivetrain = Drivetrain(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
         val follower = Constants.create(hardwareMap)
         follower.setPose(Pose(83.0, 132.0, Math.toRadians(270.0)))
         Drawing.init()
 
-        val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
+        val subsystems = listOf(gate, shooter, intake, flowertake, turret)
 
         while (opModeInInit()) {
             if (gamepad1.crossWasPressed()) {
@@ -94,7 +97,12 @@ class Full : LinearOpMode() {
             val y = -gamepad1.left_stick_y.toDouble()
             val rx = gamepad1.right_stick_x.toDouble()
 
-            drivetrain.updateDrivetrain(x, y, rx)
+            val drivePowers = ManualDrive.fieldCentric(
+                y, x, rx,
+                follower.pose().heading()
+            )
+
+            follower.manual(drivePowers)
 
             if (gamepad1.rightBumperWasPressed()) {
                 gate.toggle()

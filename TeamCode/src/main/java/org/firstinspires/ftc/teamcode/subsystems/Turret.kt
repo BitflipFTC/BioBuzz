@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems
 
 import club.bitflip.utils.hardware.ServoEx
 import club.bitflip.utils.normalizeRadians
+import com.bylazar.configurables.annotations.Configurable
 import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.math.Pose
@@ -10,7 +11,13 @@ import org.firstinspires.ftc.robotcore.external.Telemetry
 import org.firstinspires.ftc.teamcode.opmodes.teleop.Full
 import kotlin.math.atan2
 
+@Configurable
 class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareMap, telemetry) {
+    companion object {
+        @JvmField
+        var rotationCompensation = 0.01
+    }
+
     private val turret1 = ServoEx("turret1")
     private val turret2 = ServoEx("turret2")
 
@@ -80,6 +87,7 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
         val robotHeading = Math.toDegrees(normalizeRadians(robotPose.heading(), false))
 
         degrees = bearing - robotHeading
+        degrees -= robotVelocity * rotationCompensation
         telemetry.addData("distance to goal", goalPose.distance(robotPose))
     }
 }
