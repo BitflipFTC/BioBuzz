@@ -12,7 +12,7 @@ class Intake(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
 
     enum class Mode(val power: Double) {
         OFF(0.0),
-        SHOOTING(0.8),
+        SHOOTING(0.9),
         ON(0.9),
         REVERSED(-0.5)
     }
@@ -46,6 +46,10 @@ class Intake(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
 
     fun on() {
         mode = Mode.ON
+    }
+
+    fun transfer() {
+        mode = Mode.SHOOTING
     }
 
     fun off() {

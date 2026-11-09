@@ -8,13 +8,16 @@ import com.pedropathing.api.PoseFactory
 import com.pedropathing.follower.ManualDrive
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.math.Pose
+import com.pedropathing.math.Vector
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
+import org.firstinspires.ftc.teamcode.Alliance
 import org.firstinspires.ftc.teamcode.Drawing
+import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
@@ -25,19 +28,18 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret
 
 @TeleOp(name = "buzz light-year")
 class Full : LinearOpMode() {
-    enum class Alliance {
-        RED,
-        BLUE
-    }
-
-    companion object {
-        var alliance: Alliance? = null
-    }
 
     override fun runOpMode() {
         Scheduler.reset()
 
         val factory = PoseFactory.degrees()
+
+        if (OpModeStorage.savedAlliance == Alliance.RED) {
+            factory.mirrorAroundPoint(70.75, 70.75)
+        }
+
+        val startPos = factory.of(83.0, 132.0, 270.0)
+        val oppositePos = factory.of(83.0, 9.5, 90.0)
 
         telemetry =
             JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
@@ -48,10 +50,13 @@ class Full : LinearOpMode() {
         val flowertake = Flowertake(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
         val follower = Constants.create(hardwareMap)
-        follower.setPose(Pose(83.0, 132.0, Math.toRadians(270.0)))
+
+        follower.setPose(OpModeStorage.savedPose ?: startPos)
         Drawing.init()
 
         val subsystems = listOf(gate, shooter, intake, flowertake, turret)
+
+        var alliance: Alliance? = OpModeStorage.savedAlliance
 
         while (opModeInInit()) {
             if (gamepad1.crossWasPressed()) {
@@ -69,16 +74,16 @@ class Full : LinearOpMode() {
                 update()
             }
 
-            shooter.hoodPosition = 0.5
             gate.close()
         }
 
         turret.alliance = alliance
-//        turret.position = 0.5
+        turret.position = 0.5
         turret.robotPose = follower.pose()
 //        turret.trackGoalCommand.schedule()
 
         gate.close()
+        flowertake.up()
         gamepad1.triggerThreshold = 0.25f
 
         val allHubs = hardwareMap.getAll(LynxModule::class.java)
@@ -98,8 +103,9 @@ class Full : LinearOpMode() {
             val rx = gamepad1.right_stick_x.toDouble()
 
             val drivePowers = ManualDrive.fieldCentric(
-                y, x, rx,
-                follower.pose().heading()
+                -y, x, -rx,
+                follower.pose().heading(),
+                if (OpModeStorage.savedAlliance == Alliance.RED) Math.PI else 0.0
             )
 
             follower.manual(drivePowers)
@@ -124,7 +130,6 @@ class Full : LinearOpMode() {
 
             if (gamepad1.yWasPressed()) {
                 // flat against wall
-                shooter.hoodPosition = 0.6
                 shooter.targetFlywheelRPM = 3000.0
             }
 
@@ -137,19 +142,11 @@ class Full : LinearOpMode() {
             }
 
             if (gamepad1.dpadUpWasPressed()) {
-                shooter.targetFlywheelRPM += 125.0
+                shooter.targetFlywheelRPM += 125.0 / 2
             }
 
             if (gamepad1.dpadDownWasPressed()) {
-                shooter.targetFlywheelRPM -= 125.0
-            }
-
-            if (gamepad1.dpadRightWasPressed()) {
-                shooter.hoodPosition += 0.025
-            }
-
-            if (gamepad1.dpadLeftWasPressed()) {
-                shooter.hoodPosition -= 0.025
+                shooter.targetFlywheelRPM -= 125.0 / 2
             }
 
             if (gamepad1.left_trigger >= 0.25) {
@@ -157,14 +154,15 @@ class Full : LinearOpMode() {
             }
 
             if (gamepad1.startWasPressed()) {
-                follower.setPose(Pose(83.0, 132.0, Math.toRadians(270.0)))
+                follower.setPose(startPos)
             }
 
             if (gamepad1.backWasPressed()) {
-                follower.setPose(Pose(83.0, 9.5, Math.toRadians(90.0)))
+                follower.setPose(oppositePos)
             }
 
             turret.robotPose = follower.pose()
+            turret.robotVelocity = follower.velocity()
 
             Scheduler.execute()
 
@@ -186,5 +184,8 @@ class Full : LinearOpMode() {
             )
             telemetry.update()
         }
+
+        gate.close()
+        flowertake.up()
     }
 }

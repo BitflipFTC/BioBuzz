@@ -11,31 +11,20 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
 
     companion object {
         @JvmField
-        var gain = 0.00002
+        var gain = 0.01
     }
 
     private val motor = MotorEx("shooter").reverse().float()
-    private val hood = ServoEx("hood")
-    private val hoodMinPos = 0.5
     private var error = 0.0
     private var lastError = 0.0
 
     private var output = 0.0
     private var tbh = 0.0
-
-    var hoodPosition
-        get() = hood.position
-        set(newPos) {
-            hood.position = newPos.coerceIn(hoodMinPos, 1.0)
-        }
+    var bangbang = true
 
     var targetFlywheelRPM = 0.0
     var flywheelRPM = 0.0
         private set
-
-    init {
-        hood.position = hoodMinPos
-    }
 
     override fun loop() {
         flywheelRPM = (motor.velocity / 28) * 60
@@ -43,7 +32,7 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
         lastError = error
         error = targetFlywheelRPM - flywheelRPM
 
-        if (error >= 60.0) {
+        if (error >= 60.0 && bangbang) {
             motor.power = 1.0
             output = targetFlywheelRPM * (1.0 / 5000.0)
             tbh = output
@@ -64,10 +53,13 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
         telemetry.run {
             addData("Target flywheel RPM", targetFlywheelRPM)
             addData("Actual flywheel RPM", flywheelRPM)
-            addData("Hood position", hoodPosition)
             addData("Motor power", output)
         }
     }
 
     fun readyToShoot() = (error <= 100.0)
+
+    fun toggleBangBang() {
+        bangbang = !bangbang
+    }
 }

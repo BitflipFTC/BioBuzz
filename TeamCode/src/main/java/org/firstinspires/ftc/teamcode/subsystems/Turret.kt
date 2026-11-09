@@ -1,21 +1,28 @@
 package org.firstinspires.ftc.teamcode.subsystems
 
+import club.bitflip.utils.OpModeManager
 import club.bitflip.utils.hardware.ServoEx
+import club.bitflip.utils.normalizeDegrees
 import club.bitflip.utils.normalizeRadians
 import com.bylazar.configurables.annotations.Configurable
 import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.math.Pose
+import com.pedropathing.math.Velocity
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.external.Telemetry
-import org.firstinspires.ftc.teamcode.opmodes.teleop.Full
+import org.firstinspires.ftc.teamcode.Alliance
 import kotlin.math.atan2
 
 @Configurable
 class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareMap, telemetry) {
     companion object {
         @JvmField
-        var rotationCompensation = 0.01
+        var rotationCompensation = 0.00
+        @JvmField
+        var SHOT_TIME = 0.5
+        @JvmField
+        var USE_SOTM = false
     }
 
     private val turret1 = ServoEx("turret1")
@@ -31,20 +38,22 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
     lateinit var audienceHive: Pose
     lateinit var notAudienceHive: Pose
 
-    var alliance: Full.Alliance? = null
+    var alliance: Alliance? = null
         set (newAlliance) {
             field = newAlliance
 
-            if (newAlliance == Full.Alliance.BLUE) {
+            if (newAlliance == Alliance.BLUE) {
                 audienceHive = Pose(Hive.BLUE_AUDIENCE.x, Hive.BLUE_AUDIENCE.y)
                 notAudienceHive = Pose(Hive.BLUE_NOT_AUDIENCE.x, Hive.BLUE_NOT_AUDIENCE.y)
-            } else if (newAlliance == Full.Alliance.RED) {
+            } else if (newAlliance == Alliance.RED) {
                 audienceHive = Pose(Hive.RED_AUDIENCE.x, Hive.RED_AUDIENCE.y)
                 notAudienceHive = Pose(Hive.RED_NOT_AUDIENCE.x, Hive.RED_NOT_AUDIENCE.y)
             }
         }
 
     var robotPose = Pose(0.0,0.0,0.0)
+    var robotVelocity = Velocity(0.0,0.0,0.0)
+
     val turretPose: Pose
         get() = robotPose
 
@@ -69,7 +78,7 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
                 clippedAngle -= 360.0
             }
 
-            position = (((clippedAngle) / (2 * 160)) + 0.5).coerceIn(0.1, 0.9) //todo wiring
+            position = (((clippedAngle) / (2 * 160)) + 0.5).coerceIn(0.05, 0.95) //todo wiring
         }
 
     val trackGoalCommand: Command = Commands.infinite(::trackGoal)
@@ -81,13 +90,41 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
     fun trackGoal() {
         val goalPose = if (robotPose.y() >= 72) notAudienceHive else audienceHive
 
-        val bearing = Math.toDegrees(atan2(goalPose.y() - turretPose.y(), goalPose.x() - turretPose.x()))
+        if (USE_SOTM) {
+            val projectedRobotPose = robotPose.plus(robotVelocity.scale(SHOT_TIME).toPose())
 
-        // normalize robot pose between (-180, 180]
-        val robotHeading = Math.toDegrees(normalizeRadians(robotPose.heading(), false))
+            val bearing = normalizeDegrees(Math.toDegrees(atan2(goalPose.y() - projectedRobotPose.y(), goalPose.x() - projectedRobotPose.x())) + 180, false)
 
-        degrees = bearing - robotHeading
-        degrees -= robotVelocity * rotationCompensation
-        telemetry.addData("distance to goal", goalPose.distance(robotPose))
+            // normalize robot pose between (-180, 180]
+            val robotHeading = Math.toDegrees(normalizeRadians((projectedRobotPose.heading() + projectedRobotPose.heading() * SHOT_TIME), false))
+
+            degrees = bearing - robotHeading
+            telemetry.addData("distance to goal", goalPose.distance(robotPose))
+
+        } else {
+            val bearing = normalizeDegrees(
+                Math.toDegrees(
+                    atan2(
+                        goalPose.y() - turretPose.y(),
+                        goalPose.x() - turretPose.x()
+                    )
+                ) + 180, false
+            )
+
+            // normalize robot pose between (-180, 180]
+            val robotHeading = Math.toDegrees(
+                normalizeRadians(
+                    (robotPose.heading() + robotVelocity.omega * rotationCompensation),
+                    false
+                )
+            )
+
+            degrees = bearing - robotHeading
+            telemetry.addData("distance to goal", goalPose.distance(robotPose))
+        }
+    }
+
+    fun Velocity.toPose(): Pose {
+        return Pose(this.vx, this.vy, this.omega)
     }
 }

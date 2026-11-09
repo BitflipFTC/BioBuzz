@@ -17,8 +17,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
+import org.firstinspires.ftc.teamcode.Alliance
 import org.firstinspires.ftc.teamcode.Drawing
-import org.firstinspires.ftc.teamcode.opmodes.teleop.Full
+import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain
 import org.firstinspires.ftc.teamcode.subsystems.Flowertake
@@ -28,28 +29,31 @@ import org.firstinspires.ftc.teamcode.subsystems.Shooter
 import org.firstinspires.ftc.teamcode.subsystems.Turret
 
 open class TPAuto(
-    val alliance: Full.Alliance
+    val alliance: Alliance
 ) : LinearOpMode() {
 
     val factory = PoseFactory.degrees();
 
-    var startPose: Pose = factory.of(83.0, 132.0, 270.0)
-    var offWallPose: Pose = factory.of(83.0, 128.0, 270.0)
-    var parkPose: Pose = factory.of(128.0, 40.0, 270.0)
+    lateinit var startPose: Pose
+    lateinit var offWallPose: Pose
+    lateinit var parkPose: Pose
 
-    fun startToOffWall(): Path = Paths.line(startPose, offWallPose).linear(startPose, parkPose)
-    fun offWallToPark(): Path = Paths.line(offWallPose, parkPose).linear(offWallPose, parkPose)
+    fun startToOffWall(): Path = Paths.line(startPose, offWallPose).constant(startPose)
+    fun offWallToPark(): Path = Paths.curve(offWallPose, Pose(offWallPose.y(), parkPose.x()), parkPose).tangent()
 
     override fun runOpMode() {
         Scheduler.reset()
 
-        if (alliance == Full.Alliance.BLUE) {
-            factory.mirrorAroundPoint(Pose(70.75, 70.75))
+        OpModeStorage.savedAlliance = alliance
 
-            startPose = factory.of(83.0, 132.0, 270.0)
-            offWallPose = factory.of(83.0, 128.0, 270.0)
-            parkPose = factory.of(128.0, 40.0, 270.0)
+        if (alliance == Alliance.RED) {
+            factory.mirrorAroundPoint(70.75, 70.75)
         }
+
+            startPose = factory.of(83.0, 133.0, 0.0)
+            offWallPose = factory.of(83.0, 128.0, 0.0)
+            parkPose = factory.of(128.0, 47.0, 90.0)
+
 
         telemetry =
             JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
@@ -58,19 +62,16 @@ open class TPAuto(
         val shooter = Shooter(hardwareMap, telemetry)
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
-        val drivetrain = Drivetrain(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
         val follower = Constants.create(hardwareMap)
         follower.setPose(startPose)
         follower.update()
 
-        val subsystems = listOf(gate, shooter, intake, flowertake, drivetrain, turret)
+        val subsystems = listOf(gate, shooter, intake, flowertake, turret)
 
         waitForStart()
-        turret.alliance = Full.Alliance.BLUE
-//        turret.position = 0.5
+        turret.alliance = alliance
         turret.robotPose = follower.pose()
-//        turret.trackGoalCommand.schedule()
 
         gate.close()
 
@@ -81,12 +82,14 @@ open class TPAuto(
 
         val auto = Groups.sequential(
             PedroCommands.follow(follower, startToOffWall()),
-            Commands.instant { intake.on() },
+            Commands.instant { intake.transfer() },
             Commands.waitMs(1000.0),
             Commands.instant { gate.open() },
             Commands.waitMs(5000.0),
             Commands.instant { gate.close() },
-            PedroCommands.follow(follower, offWallToPark())
+            PedroCommands.follow(follower, offWallToPark()),
+            Commands.instant { intake.off() },
+            Commands.instant { shooter.targetFlywheelRPM = 0.0 }
         )
 
         waitForStart()
@@ -94,7 +97,6 @@ open class TPAuto(
         auto.schedule()
         turret.trackGoalCommand.schedule()
         // flat against wall
-        shooter.hoodPosition = 0.6
         shooter.targetFlywheelRPM = 3000.0
 
         loopTimer.start()
@@ -126,5 +128,7 @@ open class TPAuto(
             )
             telemetry.update()
         }
+
+        OpModeStorage.savedPose = follower.pose()
     }
 }
