@@ -5,6 +5,7 @@ import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
 import com.pedropathing.api.PoseFactory
+import com.pedropathing.drivetrain.DrivePowers
 import com.pedropathing.follower.ManualDrive
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.math.Pose
@@ -30,6 +31,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret
 class Full : LinearOpMode() {
 
     override fun runOpMode() {
+        var fieldCentric = true;
         Scheduler.reset()
 
         val factory = PoseFactory.degrees()
@@ -102,11 +104,19 @@ class Full : LinearOpMode() {
             val y = -gamepad1.left_stick_y.toDouble()
             val rx = gamepad1.right_stick_x.toDouble()
 
-            val drivePowers = ManualDrive.fieldCentric(
-                -y, x, -rx,
-                follower.pose().heading(),
-                if (OpModeStorage.savedAlliance == Alliance.RED) Math.PI else 0.0
-            )
+            if (gamepad1.touchpadWasPressed()) {
+                fieldCentric = !fieldCentric
+            }
+
+            val drivePowers = if (fieldCentric) {
+                ManualDrive.fieldCentric(
+                    -y, x, -rx,
+                    follower.pose().heading(),
+                    if (OpModeStorage.savedAlliance == Alliance.RED) Math.PI else 0.0
+                )
+            } else {
+                DrivePowers(-y, x, -rx)
+            }
 
             follower.manual(drivePowers)
 
@@ -151,6 +161,7 @@ class Full : LinearOpMode() {
 
             if (gamepad1.left_trigger >= 0.25) {
                 turret.trackGoal()
+                shooter.setTargetState(turret.distanceToGoal)
             }
 
             if (gamepad1.startWasPressed()) {

@@ -5,6 +5,7 @@ import club.bitflip.utils.hardware.ServoEx
 import com.bylazar.configurables.annotations.Configurable
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.external.Telemetry
+import org.firstinspires.ftc.teamcode.InterpolatedLookupTable
 
 @Configurable
 class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareMap, telemetry) {
@@ -13,6 +14,40 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
         @JvmField
         var gain = 0.01
     }
+
+    val distanceArray = doubleArrayOf(
+        32.0,
+        48.0,
+        64.0,
+        80.0,
+        96.0
+    )
+    val speedArray = doubleArrayOf(
+        2875.0,
+        3000.0,
+        3125.0,
+        3250.0,
+        3375.0
+    )
+    val timeInAirArray = doubleArrayOf(
+        0.5,
+        0.5,
+        0.6,
+        0.65,
+        0.7
+    )
+
+    private val velocityLookupTable = InterpolatedLookupTable(
+        distanceArray,
+        speedArray
+    )
+
+    private val timeInAirLookupTable = InterpolatedLookupTable(
+        distanceArray,
+        timeInAirArray
+    )
+
+    var timeInAir = 0.5
 
     private val motor = MotorEx("shooter").reverse().float()
     private var error = 0.0
@@ -26,7 +61,7 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
     var flywheelRPM = 0.0
         private set
 
-    override fun loop() {
+    fun controlLoop() {
         flywheelRPM = (motor.velocity / 28) * 60
 
         lastError = error
@@ -49,6 +84,16 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
 
             motor.power = output
         }
+    }
+
+    fun setTargetState (distance: Double) {
+        timeInAir = timeInAirLookupTable.calculate(distance)
+
+        targetFlywheelRPM = velocityLookupTable.calculate(distance)
+    }
+
+    override fun loop() {
+        controlLoop()
 
         telemetry.run {
             addData("Target flywheel RPM", targetFlywheelRPM)

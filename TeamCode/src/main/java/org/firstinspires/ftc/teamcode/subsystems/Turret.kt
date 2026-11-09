@@ -18,8 +18,6 @@ import kotlin.math.atan2
 class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwareMap, telemetry) {
     companion object {
         @JvmField
-        var rotationCompensation = 0.00
-        @JvmField
         var SHOT_TIME = 0.5
         @JvmField
         var USE_SOTM = false
@@ -54,6 +52,8 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
     var robotPose = Pose(0.0,0.0,0.0)
     var robotVelocity = Velocity(0.0,0.0,0.0)
 
+    var distanceToGoal = 32.0
+
     val turretPose: Pose
         get() = robotPose
 
@@ -85,6 +85,7 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
 
     override fun loop () {
         telemetry.addData("Turret angle", degrees)
+        telemetry.addData("distance to goal", distanceToGoal)
     }
 
     fun trackGoal() {
@@ -96,11 +97,10 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
             val bearing = normalizeDegrees(Math.toDegrees(atan2(goalPose.y() - projectedRobotPose.y(), goalPose.x() - projectedRobotPose.x())) + 180, false)
 
             // normalize robot pose between (-180, 180]
-            val robotHeading = Math.toDegrees(normalizeRadians((projectedRobotPose.heading() + projectedRobotPose.heading() * SHOT_TIME), false))
+            val robotHeading = Math.toDegrees(normalizeRadians((projectedRobotPose.heading()), false))
 
             degrees = bearing - robotHeading
-            telemetry.addData("distance to goal", goalPose.distance(robotPose))
-
+            distanceToGoal = goalPose.distance(projectedRobotPose)
         } else {
             val bearing = normalizeDegrees(
                 Math.toDegrees(
@@ -114,13 +114,14 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwar
             // normalize robot pose between (-180, 180]
             val robotHeading = Math.toDegrees(
                 normalizeRadians(
-                    (robotPose.heading() + robotVelocity.omega * rotationCompensation),
+                    (robotPose.heading()),
                     false
                 )
             )
 
             degrees = bearing - robotHeading
-            telemetry.addData("distance to goal", goalPose.distance(robotPose))
+            distanceToGoal = goalPose.distance(robotPose)
+
         }
     }
 
