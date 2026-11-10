@@ -13,39 +13,40 @@ class Shooter(hardwareMap: HardwareMap, telemetry: Telemetry) : Subsystem(hardwa
     companion object {
         @JvmField
         var gain = 0.01
+
+
+        val distanceArray = doubleArrayOf(
+            32.0,
+            48.0,
+            64.0,
+            80.0,
+            96.0
+        )
+        val speedArray = doubleArrayOf(
+            2875.0,
+            3000.0,
+            3125.0,
+            3250.0,
+            3375.0
+        )
+        val timeInAirArray = doubleArrayOf(
+            0.5,
+            0.5,
+            0.6,
+            0.65,
+            0.7
+        )
+
+        val velocityLookupTable = InterpolatedLookupTable(
+            distanceArray,
+            speedArray
+        )
+
+        val timeInAirLookupTable = InterpolatedLookupTable(
+            distanceArray,
+            timeInAirArray
+        )
     }
-
-    val distanceArray = doubleArrayOf(
-        32.0,
-        48.0,
-        64.0,
-        80.0,
-        96.0
-    )
-    val speedArray = doubleArrayOf(
-        2875.0,
-        3000.0,
-        3125.0,
-        3250.0,
-        3375.0
-    )
-    val timeInAirArray = doubleArrayOf(
-        0.5,
-        0.5,
-        0.6,
-        0.65,
-        0.7
-    )
-
-    private val velocityLookupTable = InterpolatedLookupTable(
-        distanceArray,
-        speedArray
-    )
-
-    private val timeInAirLookupTable = InterpolatedLookupTable(
-        distanceArray,
-        timeInAirArray
-    )
 
     var timeInAir = 0.5
 

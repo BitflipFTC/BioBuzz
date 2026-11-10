@@ -175,9 +175,10 @@ class Full : LinearOpMode() {
             turret.robotPose = follower.pose()
             turret.robotVelocity = follower.velocity()
 
-            Scheduler.execute()
 
             subsystems.forEach { it.loop() }
+
+            Scheduler.execute()
 
             follower.update()
 
