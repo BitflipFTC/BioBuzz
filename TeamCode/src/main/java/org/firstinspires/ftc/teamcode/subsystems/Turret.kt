@@ -50,10 +50,10 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
     private val turret2 = ServoEx("turret2")
 
     enum class Hive(val x: Double, val y: Double) {
-        RED_AUDIENCE(58.0, 52.0),
-        RED_NOT_AUDIENCE(58.0, 92.0),
-        BLUE_AUDIENCE(84.0, 52.0),
-        BLUE_NOT_AUDIENCE(84.0, 92.0)
+        RED_AUDIENCE(58.0, 54.0),
+        RED_NOT_AUDIENCE(58.0, 90.0),
+        BLUE_AUDIENCE(84.0, 54.0),
+        BLUE_NOT_AUDIENCE(84.0, 90.0)
     }
 
     lateinit var audienceHive: Pose
