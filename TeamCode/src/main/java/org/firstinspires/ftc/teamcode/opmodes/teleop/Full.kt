@@ -51,6 +51,7 @@ class Full : LinearOpMode() {
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
+        Turret.USE_SOTM = true
         val follower = Constants.create(hardwareMap)
 
         follower.setPose(OpModeStorage.savedPose ?: startPos)
@@ -81,7 +82,7 @@ class Full : LinearOpMode() {
 
         turret.alliance = alliance
         turret.position = 0.5
-        turret.robotPose = follower.pose()
+        turret.updateRobotState(follower.pose(), follower.velocity())
 //        turret.trackGoalCommand.schedule()
 
         gate.close()
@@ -159,11 +160,6 @@ class Full : LinearOpMode() {
                 shooter.targetFlywheelRPM -= 125.0 / 2
             }
 
-            if (gamepad1.left_trigger >= 0.25) {
-                turret.trackGoal()
-                shooter.setTargetState(turret.distanceToGoal)
-            }
-
             if (gamepad1.startWasPressed()) {
                 follower.setPose(startPos)
             }
@@ -172,15 +168,18 @@ class Full : LinearOpMode() {
                 follower.setPose(oppositePos)
             }
 
-            turret.robotPose = follower.pose()
-            turret.robotVelocity = follower.velocity()
+            follower.update()
 
+            turret.updateRobotState(follower.pose(), follower.velocity())
+
+            if (gamepad1.left_trigger >= 0.25) {
+                turret.trackGoal()
+                shooter.setTargetState(turret.shooterDistance)
+            }
 
             subsystems.forEach { it.loop() }
 
             Scheduler.execute()
-
-            follower.update()
 
             telemetry.addLine()
             telemetry.addData("Robot pos", "x: %.2f, y: %.2f, h: %.2f", follower.pose().x(), follower.pose().y(), follower.pose().heading())

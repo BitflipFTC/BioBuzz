@@ -82,6 +82,7 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         intake = Intake(hardwareMap, telemetry)
         flowertake = Flowertake(hardwareMap, telemetry)
         turret = Turret(hardwareMap, telemetry)
+        Turret.USE_SOTM = false
         follower = Constants.create(hardwareMap)
 
         val subsystems = listOf(gate, shooter, intake, flowertake, turret)
@@ -109,7 +110,7 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         waitForStart()
 
         turret.alliance = alliance
-        turret.robotPose = follower.pose()
+        turret.updateRobotState(follower.pose(), follower.velocity())
 
         gate.close()
 
@@ -124,9 +125,9 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         while (opModeIsActive()) {
             allHubs.forEach { hub -> hub.clearBulkCache() }
             follower.update()
+            turret.updateRobotState(follower.pose(), follower.velocity())
             Scheduler.execute()
 
-            turret.robotPose = follower.pose()
             subsystems.forEach { it.loop() }
 
 

@@ -63,6 +63,7 @@ open class TPAuto(
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
         val turret = Turret(hardwareMap, telemetry)
+        Turret.USE_SOTM = false
         val follower = Constants.create(hardwareMap)
         follower.setPose(startPose)
         follower.update()
@@ -71,7 +72,7 @@ open class TPAuto(
 
         waitForStart()
         turret.alliance = alliance
-        turret.robotPose = follower.pose()
+        turret.updateRobotState(follower.pose(), follower.velocity())
 
         gate.close()
 
@@ -106,7 +107,7 @@ open class TPAuto(
             loopTimer.end()
             loopTimer.start()
 
-            turret.robotPose = follower.pose()
+            turret.updateRobotState(follower.pose(), follower.velocity())
 
             Scheduler.execute()
 
