@@ -6,8 +6,12 @@ import com.bylazar.telemetry.PanelsTelemetry
 import com.bylazar.utils.LoopTimer
 import com.pedropathing.api.PoseFactory
 import com.pedropathing.drivetrain.DrivePowers
+import com.pedropathing.follower.Follower
 import com.pedropathing.follower.ManualDrive
+import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.Scheduler
+import com.pedropathing.ivy.commands.Commands
+import com.pedropathing.ivy.groups.Groups
 import com.pedropathing.math.Pose
 import com.pedropathing.math.Vector
 import com.qualcomm.hardware.lynx.LynxModule
@@ -30,8 +34,24 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret
 @TeleOp(name = "buzz light-year")
 class Full : LinearOpMode() {
 
+    lateinit var gate: Gate
+    lateinit var shooter : Shooter
+    lateinit var intake : Intake
+    lateinit var flowertake : Flowertake
+    lateinit var turret : Turret
+    lateinit var follower : Follower
+
+    fun shoot() : Command = Groups.sequential(
+        Commands.instant {intake.transfer()},
+        Commands.waitMs(100.0),
+        Commands.instant { gate.open() },
+        Commands.waitMs(800.0),
+        Commands.instant { gate.close() },
+        Commands.instant { intake.on() }
+    )
+
     override fun runOpMode() {
-        var fieldCentric = true;
+        var fieldCentric = false;
         Scheduler.reset()
 
         val factory = PoseFactory.degrees()
@@ -46,13 +66,13 @@ class Full : LinearOpMode() {
         telemetry =
             JoinedTelemetry(PanelsTelemetry.ftcTelemetry, TelemetryImplUpstreamSubmission(this))
 
-        val gate = Gate(hardwareMap, telemetry)
-        val shooter = Shooter(hardwareMap, telemetry)
-        val intake = Intake(hardwareMap, telemetry)
-        val flowertake = Flowertake(hardwareMap, telemetry)
-        val turret = Turret(hardwareMap, telemetry)
+        gate = Gate(hardwareMap, telemetry)
+        shooter = Shooter(hardwareMap, telemetry)
+        intake = Intake(hardwareMap, telemetry)
+        flowertake = Flowertake(hardwareMap, telemetry)
+        turret = Turret(hardwareMap, telemetry)
         Turret.USE_SOTM = true
-        val follower = Constants.create(hardwareMap)
+        follower = Constants.create(hardwareMap)
 
         follower.setPose(OpModeStorage.savedPose ?: startPos)
         Drawing.init()
@@ -116,7 +136,7 @@ class Full : LinearOpMode() {
                     if (OpModeStorage.savedAlliance == Alliance.RED) Math.PI else 0.0
                 )
             } else {
-                DrivePowers(-y, x, -rx)
+                DrivePowers(y, -x, -rx)
             }
 
             follower.manual(drivePowers)
@@ -144,12 +164,16 @@ class Full : LinearOpMode() {
                 shooter.targetFlywheelRPM = 3000.0
             }
 
-            if (gamepad1.rightTriggerWasPressed()) {
-                gate.open()
-            }
+//            if (gamepad1.rightTriggerWasPressed()) {
+//                gate.open()
+//            }
+//
+//            if (gamepad1.rightTriggerWasReleased()) {
+//                gate.close()
+//            }
 
-            if (gamepad1.rightTriggerWasReleased()) {
-                gate.close()
+            if (gamepad1.rightTriggerWasPressed()) {
+                shoot().schedule()
             }
 
             if (gamepad1.dpadUpWasPressed()) {
@@ -193,6 +217,7 @@ class Full : LinearOpMode() {
                     follower.pose().heading()
                 )
             )
+            Drawing.sendPacket()
             telemetry.update()
         }
 

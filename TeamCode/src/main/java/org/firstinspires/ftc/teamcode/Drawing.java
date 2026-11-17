@@ -40,8 +40,6 @@ public class Drawing {
     public static void drawRobot(Pose2D pose) {
         panelsField.moveCursor(pose.getX(DistanceUnit.INCH), pose.getY(DistanceUnit.INCH));
         panelsField.circle(ROBOT_RADIUS);
-
-        sendPacket();
     }
 
     /**

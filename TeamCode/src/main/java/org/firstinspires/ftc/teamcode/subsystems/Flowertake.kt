@@ -9,8 +9,8 @@ class Flowertake(hardwareMap: HardwareMap, telemetry: Telemetry) :
     Subsystem(hardwareMap, telemetry) {
 
     enum class Mode(val position: Double) {
-        DOWN(0.49),
-        UP(0.68)
+        DOWN(0.515),
+        UP(0.705)
     }
 
     private val servo = ServoEx("flower")

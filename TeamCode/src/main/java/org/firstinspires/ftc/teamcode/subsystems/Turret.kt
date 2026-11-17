@@ -74,15 +74,17 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         private const val MOUNT_OFFSET_DEGREES = 180.0
     }
 
-    private val turret1 = ServoEx("turret1", 0.0001)
-    private val turret2 = ServoEx("turret2", 0.0001)
+    private val turret1 = ServoEx("turret1", 0.001)
+    private val turret2 = ServoEx("turret2", 0.001)
 
     enum class Hive(val x: Double, val y: Double) {
-        RED_AUDIENCE(58.0, 54.0),
-        RED_NOT_AUDIENCE(58.0, 90.0),
-        BLUE_AUDIENCE(84.0, 54.0),
-        BLUE_NOT_AUDIENCE(84.0, 90.0)
+        RED_AUDIENCE(58.0, 60.0),
+        RED_NOT_AUDIENCE(58.0, 84.0),
+        BLUE_AUDIENCE(84.0, 60.0),
+        BLUE_NOT_AUDIENCE(84.0, 84.0)
     }
+
+    var goalPose: Pose = Pose(0.0,0.0,0.0)
 
     lateinit var audienceHive: Pose
     lateinit var notAudienceHive: Pose
@@ -601,13 +603,15 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
     fun trackGoal() {
         if (alliance == null) return
 
-        val goalPose = if (robotPose.y() >= 72.0) {
+        val dt = updateAccelerationEstimate(System.nanoTime())
+
+        goalPose = if (robotPose.y() >= 72.0) {
             notAudienceHive
         } else {
             audienceHive
         }
 
-        val launch = if (USE_SOTM) {
+        val launch: LaunchState = if (USE_SOTM) {
             predictLaunchState()
         } else {
             currentLaunchState()

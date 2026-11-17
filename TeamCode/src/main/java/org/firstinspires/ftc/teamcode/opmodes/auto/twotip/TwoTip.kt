@@ -8,7 +8,6 @@ import com.pedropathing.paths.Path
 import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.Scheduler.schedule
-import com.pedropathing.ivy.commands.Commands
 import com.pedropathing.ivy.commands.Commands.*
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
@@ -27,18 +26,14 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
 
     private val poseFactory = PoseFactory.degrees()
 
-    lateinit var start         : Pose
-    lateinit var leave         : Pose
-    lateinit var point2Start   : Pose
-    lateinit var point2        : Pose
-    lateinit var point2Control1: Pose
-    lateinit var point3Start   : Pose
-    lateinit var point3        : Pose
-    lateinit var point4        : Pose
-    lateinit var point5Start   : Pose
-    lateinit var point5        : Pose
-    lateinit var point5Control1: Pose
-    lateinit var point6        : Pose
+    lateinit var start                         : Pose
+    lateinit var gardenIntakeEnd               : Pose
+    lateinit var driveToOtherHiveControl1      : Pose
+    lateinit var otherHiveShoot                : Pose
+    lateinit var lineupFlowertake              : Pose
+    lateinit var flowerIntake                  : Pose
+    lateinit var driveBackFromFlowertakeControl: Pose
+    lateinit var parkPose                      : Pose
 
     lateinit var gate : Gate
     lateinit var shooter : Shooter
@@ -49,17 +44,18 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
     // Autonomous routine
     fun autoRoutine(): Command = sequential(
         instant {intake.on()},
+        instant { shooter.setTargetState(turret.distanceToGoal)},
         waitMs(2000.0),
         shoot(),
         follow(follower, gardenIntake()),
         waitMs(500.0),
-        instant {shooter.targetFlywheelRPM = 3125.0},
+        instant {shooter.targetFlywheelRPM = 3100.0},
         follow(follower, driveToOtherHive()),
         shoot(),
         instant { flowertake.down() },
         follow(follower, LineupFlowertake()),
-        follow(follower, Flowerintake()).raceWith(waitMs(2000.0)),
-        waitMs(2000.0),
+        follow(follower, Flowerintake()).raceWith(waitMs(500.0)),
+        waitMs(1500.0),
         follow(follower, drivebackagain()),
         instant { flowertake.up() },
         shoot(),
@@ -70,7 +66,7 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         instant{intake.transfer() },
         waitMs(250.0),
         instant {gate.open()},
-        waitMs(2000.0),
+        waitMs(1000.0),
         instant{gate.close()},
         instant {intake.on()}
     )
@@ -87,23 +83,23 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
 
         val subsystems = listOf(gate, shooter, intake, flowertake, turret)
 
-
         if (alliance == Alliance.RED) {
             poseFactory.mirrorAroundPoint(70.75, 70.75)
         }
 
-        start          = poseFactory.of(83.0, 133.0, 0.0)
-        leave          = poseFactory.of(131.0, 133.0, 0.0)
-        point2Start    = poseFactory.of(131.0, 133.0, 0.0)
-        point2         = poseFactory.of(118.0, 22.0, 270.0)
-        point2Control1 = poseFactory.of(112.0, 133.0, 0.0)
-        point3Start    = poseFactory.of(118.0, 22.0, 270.0)
-        point3         = poseFactory.of(94.0, 22.0, 270.0)
-        point4         = poseFactory.of(94.0, 11.5, -90.0)
-        point5Start    = poseFactory.of(94.0, 11.5, 270.0)
-        point5         = poseFactory.of(118.0, 22.0, 270.0)
-        point5Control1 = poseFactory.of(94.0, 22.0, 0.0)
-        point6         = poseFactory.of(132.0, 22.0, 270.0)
+        val yStart  = 133.0
+        val yHive   = 22.0
+        val xFlower = 94.0
+        val xHiveShoot = 106.0
+
+        start                          = poseFactory.of( 83.0,  yStart,  0.0)
+        gardenIntakeEnd                = poseFactory.of(131.5,  yStart,  0.0)
+        driveToOtherHiveControl1       = poseFactory.of(xHiveShoot,  yStart,  0.0)
+        otherHiveShoot                 = poseFactory.of(xHiveShoot,  yHive,   270.0)
+        lineupFlowertake               = poseFactory.of(xFlower, yHive,   270.0)
+        flowerIntake                   = poseFactory.of(xFlower,  11.5,   270.0)
+        driveBackFromFlowertakeControl = poseFactory.of(xFlower, yHive,   0.0)
+        parkPose                       = poseFactory.of(132.0,  20.0,   270.0)
         follower.setPose(start)
         follower.update()
 
@@ -146,15 +142,15 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         OpModeStorage.savedPose = follower.pose()
     }
 
-    fun gardenIntake(): Path = Paths.line(start, leave).linear(start, leave)
+    fun gardenIntake(): Path = Paths.line(start, gardenIntakeEnd).linear(start, gardenIntakeEnd)
 
-    fun driveToOtherHive(): Path = Paths.curve(point2Start, point2Control1, point2).linear(point2Start, point2)
+    fun driveToOtherHive(): Path = Paths.curve(gardenIntakeEnd, driveToOtherHiveControl1, otherHiveShoot).linear(gardenIntakeEnd, otherHiveShoot)
 
-    fun LineupFlowertake(): Path = Paths.line(point3Start, point3).linear(point3Start, point3)
+    fun LineupFlowertake(): Path = Paths.line(otherHiveShoot, lineupFlowertake).linear(otherHiveShoot, lineupFlowertake)
 
-    fun Flowerintake(): Path = Paths.line(point3, point4).tangent()
+    fun Flowerintake(): Path = Paths.line(lineupFlowertake, flowerIntake).tangent()
 
-    fun drivebackagain(): Path = Paths.curve(point5Start, point5Control1, point5).linear(point5Start, point5)
+    fun drivebackagain(): Path = Paths.curve(flowerIntake, driveBackFromFlowertakeControl, otherHiveShoot).linear(flowerIntake, otherHiveShoot)
 
-    fun parque(): Path = Paths.line(point5, point6).constant(point6)
+    fun parque(): Path = Paths.line(otherHiveShoot, parkPose).constant(parkPose)
 }
