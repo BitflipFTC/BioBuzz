@@ -14,7 +14,9 @@ import org.firstinspires.ftc.teamcode.Alliance
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 @Configurable
@@ -22,55 +24,122 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
     Subsystem(hardwareMap, telemetry) {
 
     companion object {
+        // True removes the robot's velocity from the shot solve (SOTM);
+        // false aims straight at the goal and uses the raw distance.
+        // Change when: isolating a miss between SOTM and the shooter tables.
         @JvmField
         var USE_SOTM = false
 
         // Time between reading robot state and the ball leaving the shooter.
-        // Set to zero because the ball is assumed to launch immediately.
-        // Increase this if shots consistently land behind a moving robot.
+        // The solver predicts the launch point and heading this far ahead.
+        // Change when: moving shots land past the goal in the direction of
+        // travel (increase) or short in the direction of travel (decrease).
+        // Include the gate/feed delay; roughly 0.04-0.12 s is typical.
         @JvmField
         var LAUNCH_LATENCY_SECONDS = 0.0
 
-        // Robot acceleration low-pass filter time constant.
+        // Scales the table's implied ball speed (distance / timeInAir) inside
+        // the SOTM solver. 1.0 trusts the table exactly.
+        // Change when: SOTM shots consistently land past the goal with 1.0
+        // (increase), or consistently land short with 1.0 (decrease).
+        // Only affects SOTM; static shots still use the raw distance.
+        @JvmField
+        var SOTM_SPEED_SCALE = 1.0
+
+        // Turret rotation center offset from the robot center, in inches.
+        // +X points toward the robot's front and +Y points to its left.
+        // Change when: the turret is not mounted exactly at the robot center.
+        // A nonzero offset adds the correct tangential launch velocity while
+        // the robot spins, which prevents spinning shots from drifting.
+        @JvmField
+        var TURRET_OFFSET_X = 0.0
+
+        // Turret rotation center offset from the robot center, in inches.
+        // +X points toward the robot's front and +Y points to its left.
+        // Change when: the turret is not mounted exactly at the robot center.
+        @JvmField
+        var TURRET_OFFSET_Y = 0.0
+
+        // Low-pass time constant for the estimated robot acceleration.
+        // Change when: the predicted launch point is jittery (increase) or
+        // reacts too slowly to acceleration changes (decrease).
+        // Roughly 0.05-0.2 s is the useful range.
         @JvmField
         var ACCEL_FILTER_TIME_CONSTANT = 0.10
 
-        // Ignore acceleration samples after long loop interruptions.
+        // Longest loop gap that still produces a valid acceleration estimate.
+        // Change when: a loop stall occasionally produces a bad prediction
+        // (decrease); the normal loop is only a few milliseconds.
         @JvmField
         var MAX_ACCEL_SAMPLE_INTERVAL = 0.25
 
-        // Ignore tiny acceleration estimates caused by velocity noise.
+        // Ignore linear acceleration estimates below this magnitude.
+        // Change when: the turret jitters while driving at a constant speed
+        // (increase) or ignores gentle acceleration (decrease).
         @JvmField
         var LINEAR_ACCEL_DEADBAND = 2.0
 
+        // Ignore angular acceleration estimates below this magnitude.
+        // Change when: the turret jitters while spinning at a constant rate
+        // (increase) or ignores gentle spin changes (decrease).
         @JvmField
         var ANGULAR_ACCEL_DEADBAND = 0.05
 
-        // Clamp acceleration estimates to physically plausible values.
+        // Hard clamp on estimated linear acceleration.
+        // Change when: the robot can accelerate or decelerate harder than this
+        // and the prediction is being clipped.
         @JvmField
         var MAX_LINEAR_ACCEL = 200.0
 
+        // Hard clamp on estimated angular acceleration.
+        // Change when: the robot can spin up harder than this and the
+        // prediction is being clipped.
         @JvmField
         var MAX_ANGULAR_ACCEL = 8.0
 
-        // Distance solver resolution.
+        // Spacing of the coarse distance search in the SOTM solver.
+        // Change when: the bracket needs to be finer (decrease).
+        // This is search resolution, not a tuning value; 0.5 in is fine.
         @JvmField
         var SOLVER_GRID_STEP = 0.5
 
+        // Number of bisection refinements after the coarse distance search.
+        // Change when: you want to save CPU (decrease). This is numerical
+        // precision only and does not correct aim or speed errors.
         @JvmField
         var SOLVER_BISECTION_ITERATIONS = 24
 
+        // Full servo travel from position 0.0 to 1.0.
+        // Change when: the servo is not actually 320 degrees, or the turret
+        // is geared. A wrong value makes aim error grow with angle.
         private const val SERVO_RANGE_DEGREES = 320.0
+
+        // Servo position that points the turret at 0 degrees.
+        // Change when: the mechanical center is not at position 0.5.
         private const val SERVO_CENTER_POSITION = 0.5
+
+        // Lowest usable servo position.
+        // Change when: the mechanism hits a hard stop before 0.05.
         private const val SERVO_MIN_POSITION = 0.05
+
+        // Highest usable servo position.
+        // Change when: the mechanism hits a hard stop before 0.95.
         private const val SERVO_MAX_POSITION = 0.95
 
+        // Lower turret angle limit derived from SERVO_MIN_POSITION.
+        // Change only by changing the servo constants, not this value.
         private const val TURRET_MIN_DEGREES =
             (SERVO_MIN_POSITION - SERVO_CENTER_POSITION) * SERVO_RANGE_DEGREES
+
+        // Upper turret angle limit derived from SERVO_MAX_POSITION.
+        // Change only by changing the servo constants, not this value.
         private const val TURRET_MAX_DEGREES =
             (SERVO_MAX_POSITION - SERVO_CENTER_POSITION) * SERVO_RANGE_DEGREES
 
-        // The turret is mounted facing backwards relative to the robot.
+        // Direction the shooter points when the servo is centered, relative
+        // to the robot's forward direction.
+        // Change when: the shooter is mounted at a different angle, or the
+        // turret's mechanical zero is offset.
         private const val MOUNT_OFFSET_DEGREES = 180.0
     }
 
@@ -121,8 +190,8 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         private set
 
     // Turret rotation center in the field frame.
-    // Currently the turret is centered on the robot, so this equals robotPose.
-    // If the turret moves, offset it in updateRobotState().
+    // Computed from robotPose plus the rotated TURRET_OFFSET_X/Y in
+    // updateRobotState().
     var turretPose = Pose(0.0, 0.0, 0.0)
 
     // Filtered field-relative robot acceleration.
@@ -241,9 +310,18 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         robotPose = pose
         robotVelocity = velocity
 
-        // The turret rotates about the robot center. If that changes,
-        // apply the offset here; launch prediction accounts for it.
-        turretPose = Pose(pose.x(), pose.y(), pose.heading())
+        // Rotate the robot-frame turret offset into the field frame.
+        // Launch prediction uses this point for the tangential velocity and
+        // acceleration, so an offset turret is handled correctly while spinning.
+        val heading = pose.heading()
+        val headingCos = cos(heading)
+        val headingSin = sin(heading)
+
+        turretPose = Pose(
+            pose.x() + TURRET_OFFSET_X * headingCos - TURRET_OFFSET_Y * headingSin,
+            pose.y() + TURRET_OFFSET_X * headingSin + TURRET_OFFSET_Y * headingCos,
+            pose.heading()
+        )
 
         updateAccelerationEstimate(System.nanoTime())
     }
@@ -434,7 +512,11 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         val relativeY = dy / time - vy
         val requiredSpeed = sqrt(relativeX * relativeX + relativeY * relativeY)
 
-        return distance / time - requiredSpeed
+        // SOTM_SPEED_SCALE trims a consistent mismatch between the table's
+        // implied ball speed and the real ball speed.
+        val tableSpeed = distance / time * SOTM_SPEED_SCALE.coerceAtLeast(0.01)
+
+        return tableSpeed - requiredSpeed
     }
 
     private fun buildShotSolution(
@@ -603,8 +685,6 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
     fun trackGoal() {
         if (alliance == null) return
 
-        val dt = updateAccelerationEstimate(System.nanoTime())
-
         goalPose = if (robotPose.y() >= 72.0) {
             notAudienceHive
         } else {
@@ -642,7 +722,7 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         )
 
         val desiredDegrees = normalizeDegrees(
-            aimBearingDegrees + MOUNT_OFFSET_DEGREES - robotHeadingDegrees,
+            aimBearingDegrees - MOUNT_OFFSET_DEGREES - robotHeadingDegrees,
             false
         )
 

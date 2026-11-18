@@ -44,7 +44,7 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
     // Autonomous routine
     fun autoRoutine(): Command = sequential(
         instant {intake.on()},
-        instant { shooter.setTargetState(turret.distanceToGoal)},
+        instant { shooter.setTargetState(turret.shooterDistance)},
         waitMs(2000.0),
         shoot(),
         follow(follower, gardenIntake()),
