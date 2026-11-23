@@ -103,10 +103,9 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         follower.setPose(start)
         follower.update()
 
-        waitForStart()
-
         turret.alliance = alliance
         turret.updateRobotState(follower.pose(), follower.velocity())
+        waitForStart()
 
         gate.close()
 
@@ -117,6 +116,8 @@ open class TwoTip(val alliance: Alliance) : LinearOpMode() {
         shooter.targetFlywheelRPM = 3060.0
 
         schedule(autoRoutine())
+
+        OpModeStorage.savedAlliance = alliance
 
         while (opModeIsActive()) {
             allHubs.forEach { hub -> hub.clearBulkCache() }

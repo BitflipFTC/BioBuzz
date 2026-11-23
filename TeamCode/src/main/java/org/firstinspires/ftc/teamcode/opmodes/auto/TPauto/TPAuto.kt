@@ -14,6 +14,7 @@ import com.pedropathing.math.Pose
 import com.pedropathing.paths.Path
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
+import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
@@ -50,8 +51,8 @@ open class TPAuto(
             factory.mirrorAroundPoint(70.75, 70.75)
         }
 
-            startPose = factory.of(83.0, 133.0, 0.0)
-            offWallPose = factory.of(83.0, 128.0, 0.0)
+            startPose = factory.of(83.0, 133.0, 90.0)
+            offWallPose = factory.of(83.0, 128.0, 90.0)
             parkPose = factory.of(128.0, 47.0, 90.0)
 
 
@@ -62,17 +63,20 @@ open class TPAuto(
         val shooter = Shooter(hardwareMap, telemetry)
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
-        val turret = Turret(hardwareMap, telemetry)
-        Turret.USE_SOTM = false
+//        val turret = Turret(hardwareMap, telemetry)
+//        Turret.USE_SOTM = false
         val follower = Constants.create(hardwareMap)
         follower.setPose(startPose)
         follower.update()
 
-        val subsystems = listOf(gate, shooter, intake, flowertake, turret)
+        val subsystems = listOf(gate, shooter, intake, flowertake)
 
+//        turret.alliance = alliance
+//        turret.updateRobotState(follower.pose(), follower.velocity())
         waitForStart()
-        turret.alliance = alliance
-        turret.updateRobotState(follower.pose(), follower.velocity())
+        val turret = hardwareMap.get(Servo::class.java, "turret1")
+//        turret.alliance = alliance
+//        turret.updateRobotState(follower.pose(), follower.velocity())
 
         gate.close()
 
@@ -84,7 +88,7 @@ open class TPAuto(
         val auto = Groups.sequential(
             PedroCommands.follow(follower, startToOffWall()),
             Commands.instant { intake.transfer() },
-            Commands.waitMs(1000.0),
+            Commands.waitMs(2000.0),
             Commands.instant { gate.open() },
             Commands.waitMs(5000.0),
             Commands.instant { gate.close() },
@@ -96,7 +100,8 @@ open class TPAuto(
         waitForStart()
 
         auto.schedule()
-        turret.trackGoalCommand.schedule()
+        turret.position = 0.365
+//        turret.trackGoalCommand.schedule()
         // flat against wall
         shooter.targetFlywheelRPM = 3000.0
 
@@ -107,7 +112,7 @@ open class TPAuto(
             loopTimer.end()
             loopTimer.start()
 
-            turret.updateRobotState(follower.pose(), follower.velocity())
+//            turret.updateRobotState(follower.pose(), follower.velocity())
 
             Scheduler.execute()
 

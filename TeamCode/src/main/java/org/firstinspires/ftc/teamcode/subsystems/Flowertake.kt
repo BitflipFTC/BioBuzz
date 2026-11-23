@@ -9,8 +9,8 @@ class Flowertake(hardwareMap: HardwareMap, telemetry: Telemetry) :
     Subsystem(hardwareMap, telemetry) {
 
     enum class Mode(val position: Double) {
-        DOWN(0.515),
-        UP(0.705)
+        DOWN(0.0),
+        UP(0.6)
     }
 
     private val servo = ServoEx("flower")
@@ -22,10 +22,18 @@ class Flowertake(hardwareMap: HardwareMap, telemetry: Telemetry) :
     var mode = Mode.UP
         set(newMode) {
             field = newMode
-            servo.position = newMode.position
+            servo.position = newMode.position + offset
         }
 
+    var offset: Double = 0.0
+    var lastOffset = offset
+
     override fun loop() {
+        if (offset != lastOffset) {
+            lastOffset = offset
+            servo.position = mode.position + offset
+        }
+
         telemetry.addData("Flowertake Mode", mode.name)
     }
 
