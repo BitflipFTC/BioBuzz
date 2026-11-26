@@ -14,7 +14,6 @@ import com.pedropathing.math.Pose
 import com.pedropathing.paths.Path
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
@@ -63,20 +62,17 @@ open class TPAuto(
         val shooter = Shooter(hardwareMap, telemetry)
         val intake = Intake(hardwareMap, telemetry)
         val flowertake = Flowertake(hardwareMap, telemetry)
-//        val turret = Turret(hardwareMap, telemetry)
-//        Turret.USE_SOTM = false
+        val turret = Turret(hardwareMap, telemetry)
+        Turret.USE_SOTM = false
         val follower = Constants.create(hardwareMap)
         follower.setPose(startPose)
         follower.update()
 
-        val subsystems = listOf(gate, shooter, intake, flowertake)
+        val subsystems = listOf(gate, shooter, intake, flowertake, turret)
 
-//        turret.alliance = alliance
-//        turret.updateRobotState(follower.pose(), follower.velocity())
         waitForStart()
-        val turret = hardwareMap.get(Servo::class.java, "turret1")
-//        turret.alliance = alliance
-//        turret.updateRobotState(follower.pose(), follower.velocity())
+        turret.alliance = alliance
+        turret.updateRobotState(follower.pose(), follower.velocity())
 
         gate.close()
 
@@ -100,8 +96,7 @@ open class TPAuto(
         waitForStart()
 
         auto.schedule()
-        turret.position = 0.365
-//        turret.trackGoalCommand.schedule()
+        turret.trackGoalCommand.schedule()
         // flat against wall
         shooter.targetFlywheelRPM = 3000.0
 
@@ -112,7 +107,7 @@ open class TPAuto(
             loopTimer.end()
             loopTimer.start()
 
-//            turret.updateRobotState(follower.pose(), follower.velocity())
+            turret.updateRobotState(follower.pose(), follower.velocity())
 
             Scheduler.execute()
 

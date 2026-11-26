@@ -17,7 +17,6 @@ import com.pedropathing.math.Vector
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
-import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D
@@ -71,15 +70,14 @@ class Full : LinearOpMode() {
         shooter = Shooter(hardwareMap, telemetry)
         intake = Intake(hardwareMap, telemetry)
         flowertake = Flowertake(hardwareMap, telemetry)
-//        turret = Turret(hardwareMap, telemetry)
-//        Turret.USE_SOTM = true
-        val turret = hardwareMap.get(Servo::class.java, "turret2");
+        turret = Turret(hardwareMap, telemetry)
+        Turret.USE_SOTM = true
         follower = Constants.create(hardwareMap)
 
         follower.setPose(OpModeStorage.savedPose ?: startPos)
         Drawing.init()
 
-        val subsystems = listOf(gate, shooter, intake, flowertake, /*turret*/)
+        val subsystems = listOf(gate, shooter, intake, flowertake, turret)
 
         var alliance: Alliance? = OpModeStorage.savedAlliance
 
@@ -102,9 +100,10 @@ class Full : LinearOpMode() {
             gate.close()
         }
 
-//        turret.alliance = alliance
-//        turret.position = 0.5
-//        turret.updateRobotState(follower.pose(), follower.velocity())
+        turret.alliance = alliance
+        turret.position = 0.5
+        turret.updateRobotState(follower.pose(), follower.velocity())
+//        turret.trackGoalCommand.schedule()
 
         gate.close()
         flowertake.up()
@@ -117,8 +116,6 @@ class Full : LinearOpMode() {
 
         loopTimer.start()
         while (opModeIsActive()) {
-            turret.position = 0.365
-
             allHubs.forEach { hub -> hub.clearBulkCache() }
 
             loopTimer.end()
@@ -158,9 +155,9 @@ class Full : LinearOpMode() {
                 intake.reversed = false
             }
 
-//            if (gamepad1.bWasPressed()) {
-//                flowertake.toggle()
-//            }
+            if (gamepad1.bWasPressed()) {
+                flowertake.toggle()
+            }
 
             if (gamepad1.yWasPressed()) {
                 // flat against wall
@@ -205,12 +202,12 @@ class Full : LinearOpMode() {
 
             follower.update()
 
-//            turret.updateRobotState(follower.pose(), follower.velocity())
+            turret.updateRobotState(follower.pose(), follower.velocity())
 
-//            if (gamepad1.left_trigger >= 0.25) {
-//                turret.trackGoal()
-//                shooter.setTargetState(turret.shooterDistance)
-//            }
+            if (gamepad1.left_trigger >= 0.25) {
+                turret.trackGoal()
+                shooter.setTargetState(turret.shooterDistance)
+            }
 
             subsystems.forEach { it.loop() }
 
