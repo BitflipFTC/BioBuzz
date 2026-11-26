@@ -109,9 +109,13 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         @JvmField
         var SOLVER_BISECTION_ITERATIONS = 24
 
+        // Turret angle change per degree of servo rotation (turret_deg / servo_deg).
+        // Example: a 24T servo pinion driving a 48T turret gear is 0.5.
+        // Change when: gearing is added or changed between the servos and turret.
+        private const val TURRET_GEAR_RATIO = 1.015625
+
         // Full servo travel from position 0.0 to 1.0.
-        // Change when: the servo is not actually 320 degrees, or the turret
-        // is geared. A wrong value makes aim error grow with angle.
+        // Change when: the servo is not actually 320 degrees.
         private const val SERVO_RANGE_DEGREES = 320.0
 
         // Servo position that points the turret at 0 degrees.
@@ -119,22 +123,26 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
         private const val SERVO_CENTER_POSITION = 0.5
 
         // Lowest usable servo position.
-        // Change when: the mechanism hits a hard stop before 0.05.
-        private const val SERVO_MIN_POSITION = 0.05
+        // Change when: the mechanism hits a hard stop before 0.025.
+        private const val SERVO_MIN_POSITION = 0.025
 
         // Highest usable servo position.
-        // Change when: the mechanism hits a hard stop before 0.95.
-        private const val SERVO_MAX_POSITION = 0.95
+        // Change when: the mechanism hits a hard stop before 0.975.
+        private const val SERVO_MAX_POSITION = 0.975
 
-        // Lower turret angle limit derived from SERVO_MIN_POSITION.
-        // Change only by changing the servo constants, not this value.
+        // Effective turret travel range in degrees accounting for gearing.
+        private const val TURRET_RANGE_DEGREES =
+            SERVO_RANGE_DEGREES * TURRET_GEAR_RATIO
+
+        // Lower turret angle limit derived from SERVO_MIN_POSITION and gear ratio.
+        // Change only by changing the servo constants or TURRET_GEAR_RATIO.
         private const val TURRET_MIN_DEGREES =
-            (SERVO_MIN_POSITION - SERVO_CENTER_POSITION) * SERVO_RANGE_DEGREES
+            (SERVO_MIN_POSITION - SERVO_CENTER_POSITION) * TURRET_RANGE_DEGREES
 
-        // Upper turret angle limit derived from SERVO_MAX_POSITION.
-        // Change only by changing the servo constants, not this value.
+        // Upper turret angle limit derived from SERVO_MAX_POSITION and gear ratio.
+        // Change only by changing the servo constants or TURRET_GEAR_RATIO.
         private const val TURRET_MAX_DEGREES =
-            (SERVO_MAX_POSITION - SERVO_CENTER_POSITION) * SERVO_RANGE_DEGREES
+            (SERVO_MAX_POSITION - SERVO_CENTER_POSITION) * TURRET_RANGE_DEGREES
 
         // Direction the shooter points when the servo is centered, relative
         // to the robot's forward direction.
@@ -258,13 +266,16 @@ class Turret(hardwareMap: HardwareMap, telemetry: Telemetry) :
 
     // Turret angle in degrees.
     var degrees: Double
-        get() = (position - SERVO_CENTER_POSITION) * SERVO_RANGE_DEGREES
+        get() = (position - SERVO_CENTER_POSITION) * TURRET_RANGE_DEGREES
         set(newDegrees) {
             if (!newDegrees.isFinite()) return
 
+            val ratio = if (abs(TURRET_GEAR_RATIO) > 1e-9) TURRET_GEAR_RATIO else 1.0
             val clippedAngle = normalizeDegrees(newDegrees, false)
+                .coerceIn(TURRET_MIN_DEGREES, TURRET_MAX_DEGREES)
 
-            position = (clippedAngle / SERVO_RANGE_DEGREES + SERVO_CENTER_POSITION)
+            val servoAngleOffset = clippedAngle / ratio
+            position = (servoAngleOffset / SERVO_RANGE_DEGREES + SERVO_CENTER_POSITION)
                 .coerceIn(SERVO_MIN_POSITION, SERVO_MAX_POSITION)
         }
 
